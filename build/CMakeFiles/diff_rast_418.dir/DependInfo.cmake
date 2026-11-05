@@ -8,9 +8,11 @@ set(CMAKE_DEPENDS_LANGUAGES
 
 # The set of dependency files which are needed:
 set(CMAKE_DEPENDS_DEPENDENCY_FILES
-  "/afs/andrew.cmu.edu/usr3/aamat/private/15618/project/src/core/persp_camera.cpp" "CMakeFiles/diff_rast_418.dir/src/core/persp_camera.cpp.o" "gcc" "CMakeFiles/diff_rast_418.dir/src/core/persp_camera.cpp.o.d"
   "/afs/andrew.cmu.edu/usr3/aamat/private/15618/project/src/core/soft_raster.cpp" "CMakeFiles/diff_rast_418.dir/src/core/soft_raster.cpp.o" "gcc" "CMakeFiles/diff_rast_418.dir/src/core/soft_raster.cpp.o.d"
+  "/afs/andrew.cmu.edu/usr3/aamat/private/15618/project/src/helpers/geometry.cpp" "CMakeFiles/diff_rast_418.dir/src/helpers/geometry.cpp.o" "gcc" "CMakeFiles/diff_rast_418.dir/src/helpers/geometry.cpp.o.d"
   "/afs/andrew.cmu.edu/usr3/aamat/private/15618/project/src/main.cpp" "CMakeFiles/diff_rast_418.dir/src/main.cpp.o" "gcc" "CMakeFiles/diff_rast_418.dir/src/main.cpp.o.d"
+  "/afs/andrew.cmu.edu/usr3/aamat/private/15618/project/src/scene/mesh.cpp" "CMakeFiles/diff_rast_418.dir/src/scene/mesh.cpp.o" "gcc" "CMakeFiles/diff_rast_418.dir/src/scene/mesh.cpp.o.d"
+  "/afs/andrew.cmu.edu/usr3/aamat/private/15618/project/src/scene/persp_camera.cpp" "CMakeFiles/diff_rast_418.dir/src/scene/persp_camera.cpp.o" "gcc" "CMakeFiles/diff_rast_418.dir/src/scene/persp_camera.cpp.o.d"
   )
 
 # Targets to which this target links which contain Fortran sources.

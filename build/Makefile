@@ -129,30 +129,6 @@ diff_rast_418/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/diff_rast_418.dir/build.make CMakeFiles/diff_rast_418.dir/build
 .PHONY : diff_rast_418/fast
 
-src/core/persp_camera.o: src/core/persp_camera.cpp.o
-.PHONY : src/core/persp_camera.o
-
-# target to build an object file
-src/core/persp_camera.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/diff_rast_418.dir/build.make CMakeFiles/diff_rast_418.dir/src/core/persp_camera.cpp.o
-.PHONY : src/core/persp_camera.cpp.o
-
-src/core/persp_camera.i: src/core/persp_camera.cpp.i
-.PHONY : src/core/persp_camera.i
-
-# target to preprocess a source file
-src/core/persp_camera.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/diff_rast_418.dir/build.make CMakeFiles/diff_rast_418.dir/src/core/persp_camera.cpp.i
-.PHONY : src/core/persp_camera.cpp.i
-
-src/core/persp_camera.s: src/core/persp_camera.cpp.s
-.PHONY : src/core/persp_camera.s
-
-# target to generate assembly for a file
-src/core/persp_camera.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/diff_rast_418.dir/build.make CMakeFiles/diff_rast_418.dir/src/core/persp_camera.cpp.s
-.PHONY : src/core/persp_camera.cpp.s
-
 src/core/soft_raster.o: src/core/soft_raster.cpp.o
 .PHONY : src/core/soft_raster.o
 
@@ -176,6 +152,30 @@ src/core/soft_raster.s: src/core/soft_raster.cpp.s
 src/core/soft_raster.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/diff_rast_418.dir/build.make CMakeFiles/diff_rast_418.dir/src/core/soft_raster.cpp.s
 .PHONY : src/core/soft_raster.cpp.s
+
+src/helpers/geometry.o: src/helpers/geometry.cpp.o
+.PHONY : src/helpers/geometry.o
+
+# target to build an object file
+src/helpers/geometry.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/diff_rast_418.dir/build.make CMakeFiles/diff_rast_418.dir/src/helpers/geometry.cpp.o
+.PHONY : src/helpers/geometry.cpp.o
+
+src/helpers/geometry.i: src/helpers/geometry.cpp.i
+.PHONY : src/helpers/geometry.i
+
+# target to preprocess a source file
+src/helpers/geometry.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/diff_rast_418.dir/build.make CMakeFiles/diff_rast_418.dir/src/helpers/geometry.cpp.i
+.PHONY : src/helpers/geometry.cpp.i
+
+src/helpers/geometry.s: src/helpers/geometry.cpp.s
+.PHONY : src/helpers/geometry.s
+
+# target to generate assembly for a file
+src/helpers/geometry.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/diff_rast_418.dir/build.make CMakeFiles/diff_rast_418.dir/src/helpers/geometry.cpp.s
+.PHONY : src/helpers/geometry.cpp.s
 
 src/main.o: src/main.cpp.o
 .PHONY : src/main.o
@@ -201,6 +201,54 @@ src/main.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/diff_rast_418.dir/build.make CMakeFiles/diff_rast_418.dir/src/main.cpp.s
 .PHONY : src/main.cpp.s
 
+src/scene/mesh.o: src/scene/mesh.cpp.o
+.PHONY : src/scene/mesh.o
+
+# target to build an object file
+src/scene/mesh.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/diff_rast_418.dir/build.make CMakeFiles/diff_rast_418.dir/src/scene/mesh.cpp.o
+.PHONY : src/scene/mesh.cpp.o
+
+src/scene/mesh.i: src/scene/mesh.cpp.i
+.PHONY : src/scene/mesh.i
+
+# target to preprocess a source file
+src/scene/mesh.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/diff_rast_418.dir/build.make CMakeFiles/diff_rast_418.dir/src/scene/mesh.cpp.i
+.PHONY : src/scene/mesh.cpp.i
+
+src/scene/mesh.s: src/scene/mesh.cpp.s
+.PHONY : src/scene/mesh.s
+
+# target to generate assembly for a file
+src/scene/mesh.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/diff_rast_418.dir/build.make CMakeFiles/diff_rast_418.dir/src/scene/mesh.cpp.s
+.PHONY : src/scene/mesh.cpp.s
+
+src/scene/persp_camera.o: src/scene/persp_camera.cpp.o
+.PHONY : src/scene/persp_camera.o
+
+# target to build an object file
+src/scene/persp_camera.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/diff_rast_418.dir/build.make CMakeFiles/diff_rast_418.dir/src/scene/persp_camera.cpp.o
+.PHONY : src/scene/persp_camera.cpp.o
+
+src/scene/persp_camera.i: src/scene/persp_camera.cpp.i
+.PHONY : src/scene/persp_camera.i
+
+# target to preprocess a source file
+src/scene/persp_camera.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/diff_rast_418.dir/build.make CMakeFiles/diff_rast_418.dir/src/scene/persp_camera.cpp.i
+.PHONY : src/scene/persp_camera.cpp.i
+
+src/scene/persp_camera.s: src/scene/persp_camera.cpp.s
+.PHONY : src/scene/persp_camera.s
+
+# target to generate assembly for a file
+src/scene/persp_camera.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/diff_rast_418.dir/build.make CMakeFiles/diff_rast_418.dir/src/scene/persp_camera.cpp.s
+.PHONY : src/scene/persp_camera.cpp.s
+
 # Help Target
 help:
 	@echo "The following are some of the valid targets for this Makefile:"
@@ -210,15 +258,21 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... diff_rast_418"
-	@echo "... src/core/persp_camera.o"
-	@echo "... src/core/persp_camera.i"
-	@echo "... src/core/persp_camera.s"
 	@echo "... src/core/soft_raster.o"
 	@echo "... src/core/soft_raster.i"
 	@echo "... src/core/soft_raster.s"
+	@echo "... src/helpers/geometry.o"
+	@echo "... src/helpers/geometry.i"
+	@echo "... src/helpers/geometry.s"
 	@echo "... src/main.o"
 	@echo "... src/main.i"
 	@echo "... src/main.s"
+	@echo "... src/scene/mesh.o"
+	@echo "... src/scene/mesh.i"
+	@echo "... src/scene/mesh.s"
+	@echo "... src/scene/persp_camera.o"
+	@echo "... src/scene/persp_camera.i"
+	@echo "... src/scene/persp_camera.s"
 .PHONY : help
 
 

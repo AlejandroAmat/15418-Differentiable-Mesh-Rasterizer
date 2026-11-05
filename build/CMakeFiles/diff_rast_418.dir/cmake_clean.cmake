@@ -1,10 +1,14 @@
 file(REMOVE_RECURSE
-  "CMakeFiles/diff_rast_418.dir/src/core/persp_camera.cpp.o"
-  "CMakeFiles/diff_rast_418.dir/src/core/persp_camera.cpp.o.d"
   "CMakeFiles/diff_rast_418.dir/src/core/soft_raster.cpp.o"
   "CMakeFiles/diff_rast_418.dir/src/core/soft_raster.cpp.o.d"
+  "CMakeFiles/diff_rast_418.dir/src/helpers/geometry.cpp.o"
+  "CMakeFiles/diff_rast_418.dir/src/helpers/geometry.cpp.o.d"
   "CMakeFiles/diff_rast_418.dir/src/main.cpp.o"
   "CMakeFiles/diff_rast_418.dir/src/main.cpp.o.d"
+  "CMakeFiles/diff_rast_418.dir/src/scene/mesh.cpp.o"
+  "CMakeFiles/diff_rast_418.dir/src/scene/mesh.cpp.o.d"
+  "CMakeFiles/diff_rast_418.dir/src/scene/persp_camera.cpp.o"
+  "CMakeFiles/diff_rast_418.dir/src/scene/persp_camera.cpp.o.d"
   "diff_rast_418"
   "diff_rast_418.pdb"
 )

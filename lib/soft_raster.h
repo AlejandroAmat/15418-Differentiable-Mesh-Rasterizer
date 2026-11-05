@@ -4,11 +4,19 @@
 
 class SoftRasterizerCPU {
 public:
-  SoftRasterizerCPU(int w, int h) : m_w(w), m_h(h) {}
+  SoftRasterizerCPU() {}
   void forward();
   void backward();
 
-  void add_camera(const PerspectiveCamera &cam) { m_cameras.push_back(cam); }
+  void add_camera(const PerspectiveCamera &cam) {
+    if (m_cameras.empty()) {
+      m_h = cam.get_h();
+      m_w = cam.get_w();
+    }
+    m_cameras.push_back(cam);
+  }
+
+  int get_num_cameras() const { return m_cameras.size(); }
 
 private:
   int m_w;

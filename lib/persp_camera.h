@@ -11,6 +11,9 @@ public:
 
   void set_extrinsics(const Mat4 &T);
 
+  int get_w() const { return m_w; }
+  int get_h() const { return m_h; }
+
 private:
   int m_w;
   int m_h;

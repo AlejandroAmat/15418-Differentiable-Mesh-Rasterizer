@@ -11,7 +11,9 @@ endif()
 add_executable(diff_rast_418
   src/main.cpp
   src/core/soft_raster.cpp
-  src/core/persp_camera.cpp
+  src/scene/persp_camera.cpp
+  src/scene/mesh.cpp
+  src/helpers/geometry.cpp
 )
 
 target_include_directories(diff_rast_418 PRIVATE lib)

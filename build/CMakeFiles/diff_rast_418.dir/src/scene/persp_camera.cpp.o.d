@@ -1,5 +1,5 @@
-CMakeFiles/diff_rast_418.dir/src/core/persp_camera.cpp.o: \
- /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/src/core/persp_camera.cpp \
+CMakeFiles/diff_rast_418.dir/src/scene/persp_camera.cpp.o: \
+ /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/src/scene/persp_camera.cpp \
  /usr/include/stdc-predef.h \
  /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/lib/persp_camera.h \
  /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/lib/utils.h \

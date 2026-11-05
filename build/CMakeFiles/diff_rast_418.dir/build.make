@@ -97,35 +97,67 @@ CMakeFiles/diff_rast_418.dir/src/core/soft_raster.cpp.s: cmake_force
 	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/diff_rast_418.dir/src/core/soft_raster.cpp.s"
 	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/src/core/soft_raster.cpp -o CMakeFiles/diff_rast_418.dir/src/core/soft_raster.cpp.s
 
-CMakeFiles/diff_rast_418.dir/src/core/persp_camera.cpp.o: CMakeFiles/diff_rast_418.dir/flags.make
-CMakeFiles/diff_rast_418.dir/src/core/persp_camera.cpp.o: /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/src/core/persp_camera.cpp
-CMakeFiles/diff_rast_418.dir/src/core/persp_camera.cpp.o: CMakeFiles/diff_rast_418.dir/compiler_depend.ts
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/afs/andrew.cmu.edu/usr3/aamat/private/15618/project/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/diff_rast_418.dir/src/core/persp_camera.cpp.o"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/diff_rast_418.dir/src/core/persp_camera.cpp.o -MF CMakeFiles/diff_rast_418.dir/src/core/persp_camera.cpp.o.d -o CMakeFiles/diff_rast_418.dir/src/core/persp_camera.cpp.o -c /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/src/core/persp_camera.cpp
+CMakeFiles/diff_rast_418.dir/src/scene/persp_camera.cpp.o: CMakeFiles/diff_rast_418.dir/flags.make
+CMakeFiles/diff_rast_418.dir/src/scene/persp_camera.cpp.o: /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/src/scene/persp_camera.cpp
+CMakeFiles/diff_rast_418.dir/src/scene/persp_camera.cpp.o: CMakeFiles/diff_rast_418.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/afs/andrew.cmu.edu/usr3/aamat/private/15618/project/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_3) "Building CXX object CMakeFiles/diff_rast_418.dir/src/scene/persp_camera.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/diff_rast_418.dir/src/scene/persp_camera.cpp.o -MF CMakeFiles/diff_rast_418.dir/src/scene/persp_camera.cpp.o.d -o CMakeFiles/diff_rast_418.dir/src/scene/persp_camera.cpp.o -c /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/src/scene/persp_camera.cpp
 
-CMakeFiles/diff_rast_418.dir/src/core/persp_camera.cpp.i: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/diff_rast_418.dir/src/core/persp_camera.cpp.i"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/src/core/persp_camera.cpp > CMakeFiles/diff_rast_418.dir/src/core/persp_camera.cpp.i
+CMakeFiles/diff_rast_418.dir/src/scene/persp_camera.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/diff_rast_418.dir/src/scene/persp_camera.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/src/scene/persp_camera.cpp > CMakeFiles/diff_rast_418.dir/src/scene/persp_camera.cpp.i
 
-CMakeFiles/diff_rast_418.dir/src/core/persp_camera.cpp.s: cmake_force
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/diff_rast_418.dir/src/core/persp_camera.cpp.s"
-	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/src/core/persp_camera.cpp -o CMakeFiles/diff_rast_418.dir/src/core/persp_camera.cpp.s
+CMakeFiles/diff_rast_418.dir/src/scene/persp_camera.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/diff_rast_418.dir/src/scene/persp_camera.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/src/scene/persp_camera.cpp -o CMakeFiles/diff_rast_418.dir/src/scene/persp_camera.cpp.s
+
+CMakeFiles/diff_rast_418.dir/src/scene/mesh.cpp.o: CMakeFiles/diff_rast_418.dir/flags.make
+CMakeFiles/diff_rast_418.dir/src/scene/mesh.cpp.o: /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/src/scene/mesh.cpp
+CMakeFiles/diff_rast_418.dir/src/scene/mesh.cpp.o: CMakeFiles/diff_rast_418.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/afs/andrew.cmu.edu/usr3/aamat/private/15618/project/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Building CXX object CMakeFiles/diff_rast_418.dir/src/scene/mesh.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/diff_rast_418.dir/src/scene/mesh.cpp.o -MF CMakeFiles/diff_rast_418.dir/src/scene/mesh.cpp.o.d -o CMakeFiles/diff_rast_418.dir/src/scene/mesh.cpp.o -c /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/src/scene/mesh.cpp
+
+CMakeFiles/diff_rast_418.dir/src/scene/mesh.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/diff_rast_418.dir/src/scene/mesh.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/src/scene/mesh.cpp > CMakeFiles/diff_rast_418.dir/src/scene/mesh.cpp.i
+
+CMakeFiles/diff_rast_418.dir/src/scene/mesh.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/diff_rast_418.dir/src/scene/mesh.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/src/scene/mesh.cpp -o CMakeFiles/diff_rast_418.dir/src/scene/mesh.cpp.s
+
+CMakeFiles/diff_rast_418.dir/src/helpers/geometry.cpp.o: CMakeFiles/diff_rast_418.dir/flags.make
+CMakeFiles/diff_rast_418.dir/src/helpers/geometry.cpp.o: /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/src/helpers/geometry.cpp
+CMakeFiles/diff_rast_418.dir/src/helpers/geometry.cpp.o: CMakeFiles/diff_rast_418.dir/compiler_depend.ts
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --progress-dir=/afs/andrew.cmu.edu/usr3/aamat/private/15618/project/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Building CXX object CMakeFiles/diff_rast_418.dir/src/helpers/geometry.cpp.o"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -MD -MT CMakeFiles/diff_rast_418.dir/src/helpers/geometry.cpp.o -MF CMakeFiles/diff_rast_418.dir/src/helpers/geometry.cpp.o.d -o CMakeFiles/diff_rast_418.dir/src/helpers/geometry.cpp.o -c /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/src/helpers/geometry.cpp
+
+CMakeFiles/diff_rast_418.dir/src/helpers/geometry.cpp.i: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Preprocessing CXX source to CMakeFiles/diff_rast_418.dir/src/helpers/geometry.cpp.i"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -E /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/src/helpers/geometry.cpp > CMakeFiles/diff_rast_418.dir/src/helpers/geometry.cpp.i
+
+CMakeFiles/diff_rast_418.dir/src/helpers/geometry.cpp.s: cmake_force
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green "Compiling CXX source to assembly CMakeFiles/diff_rast_418.dir/src/helpers/geometry.cpp.s"
+	/usr/bin/c++ $(CXX_DEFINES) $(CXX_INCLUDES) $(CXX_FLAGS) -S /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/src/helpers/geometry.cpp -o CMakeFiles/diff_rast_418.dir/src/helpers/geometry.cpp.s
 
 # Object files for target diff_rast_418
 diff_rast_418_OBJECTS = \
 "CMakeFiles/diff_rast_418.dir/src/main.cpp.o" \
 "CMakeFiles/diff_rast_418.dir/src/core/soft_raster.cpp.o" \
-"CMakeFiles/diff_rast_418.dir/src/core/persp_camera.cpp.o"
+"CMakeFiles/diff_rast_418.dir/src/scene/persp_camera.cpp.o" \
+"CMakeFiles/diff_rast_418.dir/src/scene/mesh.cpp.o" \
+"CMakeFiles/diff_rast_418.dir/src/helpers/geometry.cpp.o"
 
 # External object files for target diff_rast_418
 diff_rast_418_EXTERNAL_OBJECTS =
 
 diff_rast_418: CMakeFiles/diff_rast_418.dir/src/main.cpp.o
 diff_rast_418: CMakeFiles/diff_rast_418.dir/src/core/soft_raster.cpp.o
-diff_rast_418: CMakeFiles/diff_rast_418.dir/src/core/persp_camera.cpp.o
+diff_rast_418: CMakeFiles/diff_rast_418.dir/src/scene/persp_camera.cpp.o
+diff_rast_418: CMakeFiles/diff_rast_418.dir/src/scene/mesh.cpp.o
+diff_rast_418: CMakeFiles/diff_rast_418.dir/src/helpers/geometry.cpp.o
 diff_rast_418: CMakeFiles/diff_rast_418.dir/build.make
 diff_rast_418: CMakeFiles/diff_rast_418.dir/link.txt
-	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/afs/andrew.cmu.edu/usr3/aamat/private/15618/project/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_4) "Linking CXX executable diff_rast_418"
+	@$(CMAKE_COMMAND) -E cmake_echo_color "--switch=$(COLOR)" --green --bold --progress-dir=/afs/andrew.cmu.edu/usr3/aamat/private/15618/project/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_6) "Linking CXX executable diff_rast_418"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/diff_rast_418.dir/link.txt --verbose=$(VERBOSE)
 
 # Rule to build all files generated by this target.
