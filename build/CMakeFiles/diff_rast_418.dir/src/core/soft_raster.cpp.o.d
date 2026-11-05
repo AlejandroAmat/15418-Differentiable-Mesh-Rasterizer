@@ -2,7 +2,7 @@ CMakeFiles/diff_rast_418.dir/src/core/soft_raster.cpp.o: \
  /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/src/core/soft_raster.cpp \
  /usr/include/stdc-predef.h \
  /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/lib/soft_raster.h \
- /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/lib/persp_camera.h \
+ /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/lib/mesh.h \
  /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/lib/utils.h \
  /usr/include/c++/13/vector /usr/include/c++/13/bits/requires_hosted.h \
  /usr/include/x86_64-linux-gnu/c++/13/bits/c++config.h \
@@ -54,6 +54,7 @@ CMakeFiles/diff_rast_418.dir/src/core/soft_raster.cpp.o: \
  /usr/lib/gcc/x86_64-linux-gnu/13/include/stddef.h \
  /usr/include/c++/13/bits/uses_allocator.h \
  /usr/include/c++/13/bits/uses_allocator_args.h /usr/include/c++/13/tuple \
+ /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/lib/persp_camera.h \
  /usr/include/c++/13/iostream /usr/include/c++/13/ostream \
  /usr/include/c++/13/ios /usr/include/c++/13/iosfwd \
  /usr/include/c++/13/bits/stringfwd.h /usr/include/c++/13/bits/postypes.h \

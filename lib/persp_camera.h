@@ -13,10 +13,12 @@ public:
 
   int get_w() const { return m_w; }
   int get_h() const { return m_h; }
+  const Mat4 &T() const { return m_T; };
+  const Mat3 &K() const { return m_K; };
 
 private:
   int m_w;
   int m_h;
   Mat3 m_K;
-  Mat4 m_T;
+  Mat4 m_T = Mat4::identity();
 };

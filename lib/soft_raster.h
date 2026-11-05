@@ -1,11 +1,13 @@
 #pragma once
+#include "mesh.h"
 #include "persp_camera.h"
 #include <vector>
+// we have to think of image
 
 class SoftRasterizerCPU {
 public:
   SoftRasterizerCPU() {}
-  void forward();
+  void forward(PerspectiveCamera &cam, Mesh &m);
   void backward();
 
   void add_camera(const PerspectiveCamera &cam) {

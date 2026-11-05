@@ -15,6 +15,9 @@ public:
     m_faces = faces;
     m_num_verts = vertices.size();
   }
+  const std::vector<Vec3F> &vertices() const { return m_vertices; }
+  const std::vector<Vec3I> &faces() const { return m_faces; }
+  const int num_verts() const { return m_num_verts; };
 
 private:
   std::vector<Vec3I> m_faces;

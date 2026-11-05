@@ -3,6 +3,7 @@
 
 CMakeFiles/diff_rast_418.dir/src/core/soft_raster.cpp.o
  /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/src/core/soft_raster.cpp
+ /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/lib/mesh.h
  /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/lib/persp_camera.h
  /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/lib/soft_raster.h
  /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/lib/utils.h
