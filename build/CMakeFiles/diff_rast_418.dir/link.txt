@@ -1,0 +1,1 @@
+/usr/bin/c++ -O3 -DNDEBUG CMakeFiles/diff_rast_418.dir/src/main.cpp.o CMakeFiles/diff_rast_418.dir/src/core/soft_raster.cpp.o CMakeFiles/diff_rast_418.dir/src/core/persp_camera.cpp.o -o diff_rast_418 
