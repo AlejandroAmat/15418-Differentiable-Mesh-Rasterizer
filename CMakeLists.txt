@@ -14,6 +14,7 @@ add_executable(diff_rast_418
   src/scene/persp_camera.cpp
   src/scene/mesh.cpp
   src/helpers/geometry.cpp
+  src/core/image.cpp
 )
 
 target_include_directories(diff_rast_418 PRIVATE lib)

@@ -3,12 +3,35 @@
 struct Mat3 {
   float m[9];
   float &at(int i, int j) { return m[i * 3 + j]; }
+  float at(int i, int j) const { return m[i * 3 + j]; }
   static Mat3 identity() { return {1, 0, 0, 0, 1, 0, 0, 0, 1}; }
+};
+
+struct Vec2F {
+  float m[2];
+  float &at(int i) { return m[i]; }
+  float at(int i) const { return m[i]; }
+  Vec2F operator*(float s) const { return {m[0] * s, m[1] * s}; }
+  Vec2F operator+(const Vec2F &o) const {
+    return {m[0] + o.m[0], m[1] + o.m[1]};
+  }
+  Vec2F operator-(const Vec2F &o) const {
+    return {m[0] - o.m[0], m[1] - o.m[1]};
+  }
+  Vec2F &operator+=(const Vec2F &o) {
+    m[0] += o.m[0];
+    m[1] += o.m[1];
+    return *this;
+  }
+  float x() const { return m[0]; }
+  float y() const { return m[1]; }
+  float dot(const Vec2F &o) const { return m[0] * o.m[0] + m[1] * o.m[1]; }
 };
 
 struct Vec3F {
   float m[3];
   float &at(int i) { return m[i]; }
+  float at(int i) const { return m[i]; }
   Vec3F operator*(float s) const { return {m[0] * s, m[1] * s, m[2] * s}; }
   Vec3F operator+(const Vec3F &o) const {
     return {m[0] + o.m[0], m[1] + o.m[1], m[2] + o.m[2]};
@@ -19,11 +42,21 @@ struct Vec3F {
     m[2] += o.m[2];
     return *this;
   }
+  float x() const { return m[0]; }
+  float y() const { return m[1]; }
+  float z() const { return m[2]; }
+  Vec2F xy() const { return {m[0], m[1]}; }
 };
+
+inline void toPixelSpace(const Mat3 &K, Vec3F &p) {
+  p.at(0) = (K.at(0, 0) * p.at(0)) / p.at(2) + K.at(0, 2);
+  p.at(1) = (K.at(1, 1) * p.at(1)) / p.at(2) + K.at(1, 2);
+}
 
 struct Mat4 {
   float m[16];
   float &at(int i, int j) { return m[i * 4 + j]; }
+  float at(int i, int j) const { return m[i * 4 + j]; }
   static Mat4 identity() {
     return {1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1};
   }
@@ -37,4 +70,5 @@ struct Mat4 {
 typedef struct {
   int m[3];
   int &at(int i) { return m[i]; }
+  int at(int i) const { return m[i]; }
 } Vec3I;

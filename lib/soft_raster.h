@@ -1,13 +1,33 @@
 #pragma once
+#include "image.h"
 #include "mesh.h"
 #include "persp_camera.h"
+#include <algorithm>
+#include <cmath>
 #include <vector>
 // we have to think of image
-
+struct Accumulator {
+  std::vector<float> m;
+  int _w;
+  void reset(int w, int h) {
+    m.resize(w * h);
+    _w = w;
+    std::fill(m.begin(), m.end(), 1.0f);
+  }
+  float &at(int i, int j) { return m[i + j * _w]; }
+  float at(int i, int j) const { return m[i + j * _w]; }
+};
+struct Face {
+  Vec3I vert_idx;
+  bool shown;
+  Vec2F e1, e0;
+  float d;
+  int bbox[4];
+};
 class SoftRasterizerCPU {
 public:
   SoftRasterizerCPU() {}
-  void forward(PerspectiveCamera &cam, Mesh &m);
+  void forward(PerspectiveCamera &cam, Mesh &m, Image &render);
   void backward();
 
   void add_camera(const PerspectiveCamera &cam) {
@@ -19,6 +39,15 @@ public:
   }
 
   int get_num_cameras() const { return m_cameras.size(); }
+
+  std::vector<Vec3F> projected_verts;
+  std::vector<Face> faces;
+
+  float epsilon = 1e-4;
+  float sigma = 36;
+  float inv_sigma = 1 / 36;
+
+  Accumulator accum;
 
 private:
   int m_w;
