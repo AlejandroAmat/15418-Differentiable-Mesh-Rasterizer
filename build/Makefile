@@ -129,6 +129,30 @@ diff_rast_418/fast:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/diff_rast_418.dir/build.make CMakeFiles/diff_rast_418.dir/build
 .PHONY : diff_rast_418/fast
 
+src/core/image.o: src/core/image.cpp.o
+.PHONY : src/core/image.o
+
+# target to build an object file
+src/core/image.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/diff_rast_418.dir/build.make CMakeFiles/diff_rast_418.dir/src/core/image.cpp.o
+.PHONY : src/core/image.cpp.o
+
+src/core/image.i: src/core/image.cpp.i
+.PHONY : src/core/image.i
+
+# target to preprocess a source file
+src/core/image.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/diff_rast_418.dir/build.make CMakeFiles/diff_rast_418.dir/src/core/image.cpp.i
+.PHONY : src/core/image.cpp.i
+
+src/core/image.s: src/core/image.cpp.s
+.PHONY : src/core/image.s
+
+# target to generate assembly for a file
+src/core/image.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/diff_rast_418.dir/build.make CMakeFiles/diff_rast_418.dir/src/core/image.cpp.s
+.PHONY : src/core/image.cpp.s
+
 src/core/soft_raster.o: src/core/soft_raster.cpp.o
 .PHONY : src/core/soft_raster.o
 
@@ -258,6 +282,9 @@ help:
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
 	@echo "... diff_rast_418"
+	@echo "... src/core/image.o"
+	@echo "... src/core/image.i"
+	@echo "... src/core/image.s"
 	@echo "... src/core/soft_raster.o"
 	@echo "... src/core/soft_raster.i"
 	@echo "... src/core/soft_raster.s"

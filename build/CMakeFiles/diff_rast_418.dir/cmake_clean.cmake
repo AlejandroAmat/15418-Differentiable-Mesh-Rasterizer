@@ -1,4 +1,6 @@
 file(REMOVE_RECURSE
+  "CMakeFiles/diff_rast_418.dir/src/core/image.cpp.o"
+  "CMakeFiles/diff_rast_418.dir/src/core/image.cpp.o.d"
   "CMakeFiles/diff_rast_418.dir/src/core/soft_raster.cpp.o"
   "CMakeFiles/diff_rast_418.dir/src/core/soft_raster.cpp.o.d"
   "CMakeFiles/diff_rast_418.dir/src/helpers/geometry.cpp.o"
