@@ -16,8 +16,15 @@ public:
     m_num_verts = vertices.size();
   }
   const std::vector<Vec3F> &vertices() const { return m_vertices; }
+  std::vector<Vec3F> &vertices() { return m_vertices; }
+
   const std::vector<Vec3I> &faces() const { return m_faces; }
+  std::vector<Vec3I> &faces() { return m_faces; }
+
   const int num_verts() const { return m_num_verts; };
+
+  Vec3F get_center();
+  Vec3F get_center_bbox(float &scale);
 
 private:
   std::vector<Vec3I> m_faces;

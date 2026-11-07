@@ -2,8 +2,7 @@
 #include <iostream>
 #include <vector>
 
-void SoftRasterizerCPU::forward(PerspectiveCamera &cam, Mesh &m,
-                                Image &render) {
+void SoftRasterizerCPU::forward(Mesh &m, int view_idx) {
 
   // Project
 
@@ -13,6 +12,8 @@ void SoftRasterizerCPU::forward(PerspectiveCamera &cam, Mesh &m,
   projected_verts.resize(num_verts);
   faces.resize(num_faces);
   accum.reset(m_w, m_h);
+
+  PerspectiveCamera &cam = m_cameras[view_idx];
 
   for (size_t i = 0; i < num_verts; ++i) {
     Vec3F projected = cam.T() * m.vertices()[i];
@@ -42,8 +43,8 @@ void SoftRasterizerCPU::forward(PerspectiveCamera &cam, Mesh &m,
     float min_y = std::min({vx0.y(), vx1.y(), vx2.y()});
     float max_y = std::max({vx0.y(), vx1.y(), vx2.y()});
 
-    if (min_x < 0 || min_y < 0 || max_x >= cam.get_w() ||
-        max_y >= cam.get_h()) {
+    if (max_x < 0 || max_y < 0 || min_x >= cam.get_w() ||
+        min_y >= cam.get_h()) {
       cur_face.shown = false;
       continue;
     }
@@ -130,11 +131,97 @@ void SoftRasterizerCPU::forward(PerspectiveCamera &cam, Mesh &m,
   }
 
   float alpha;
+  Image &cur_view = m_views[view_idx];
   for (int y = 0; y < m_h; y++) {
     for (int x = 0; x < m_w; x++) {
       alpha = 1 - accum.at(x, y);
-      render.at(x, y) =
+      cur_view.at(x, y) =
           std::round(std::min(std::max(255.0f * alpha, 0.0f), 255.0f));
+    }
+  }
+}
+
+void SoftRasterizerCPU::render_shaded(Mesh &m, int view_idx, Image &out) {
+  const auto &V = m.vertices();
+  const auto &F = m.faces();
+  PerspectiveCamera &cam = m_cameras[view_idx];
+
+  // vertex normals: sum of unnormalized face normals (= area weighted)
+  std::vector<Vec3F> N(V.size(), Vec3F{0, 0, 0});
+  for (const auto &f : F) {
+    const Vec3F &a = V[f.at(0)], &b = V[f.at(1)], &c = V[f.at(2)];
+    Vec3F fn = (b - a).cross(c - a);
+    N[f.at(0)] += fn;
+    N[f.at(1)] += fn;
+    N[f.at(2)] += fn;
+  }
+  for (auto &n : N) {
+    float l = n.norm();
+    if (l > 0)
+      n = n * (1.0f / l);
+  }
+
+  // light: from the camera, tilted a bit from above
+  const Mat4 &T = cam.T();
+  Vec3F to_cam{-T.at(2, 0), -T.at(2, 1), -T.at(2, 2)}; // -forward
+  Vec3F light = (to_cam + Vec3F{0, 1, 0} * 0.7f).normalized();
+
+  // project
+  std::vector<Vec3F> P(V.size());
+  for (size_t i = 0; i < V.size(); ++i) {
+    P[i] = cam.T() * V[i];
+    toPixelSpace(cam.K(), P[i]);
+  }
+
+  // z-buffer stores 1/z (0 = background, bigger = closer)
+  std::vector<float> zinv(m_w * m_h, 0.0f);
+  for (int y = 0; y < m_h; y++)
+    for (int x = 0; x < m_w; x++)
+      out.at(x, y) = 0.0f;
+
+  for (const auto &f : F) {
+    const Vec3F &p0 = P[f.at(0)], &p1 = P[f.at(1)], &p2 = P[f.at(2)];
+    if (p0.z() <= 0 || p1.z() <= 0 || p2.z() <= 0)
+      continue;
+
+    Vec2F e0 = p0.xy() - p2.xy(), e1 = p1.xy() - p2.xy();
+    float d = e0.x() * e1.y() - e1.x() * e0.y();
+    if (std::abs(d) < 1e-8f)
+      continue;
+    float inv_d = 1.0f / d;
+
+    int x0 = std::max((int)std::floor(std::min({p0.x(), p1.x(), p2.x()})), 0);
+    int x1 =
+        std::min((int)std::ceil(std::max({p0.x(), p1.x(), p2.x()})), m_w - 1);
+    int y0 = std::max((int)std::floor(std::min({p0.y(), p1.y(), p2.y()})), 0);
+    int y1 =
+        std::min((int)std::ceil(std::max({p0.y(), p1.y(), p2.y()})), m_h - 1);
+
+    float iz0 = 1.0f / p0.z(), iz1 = 1.0f / p1.z(), iz2 = 1.0f / p2.z();
+
+    for (int y = y0; y <= y1; y++) {
+      for (int x = x0; x <= x1; x++) {
+        Vec2F q = Vec2F{x + 0.5f, y + 0.5f} - p2.xy();
+        float b0 = (q.x() * e1.y() - e1.x() * q.y()) * inv_d;
+        float b1 = (e0.x() * q.y() - q.x() * e0.y()) * inv_d;
+        float b2 = 1.0f - b0 - b1;
+        if (b0 < 0 || b1 < 0 || b2 < 0)
+          continue;
+
+        float iz = b0 * iz0 + b1 * iz1 + b2 * iz2;
+        float &zb = zinv[y * m_w + x];
+        if (iz <= zb)
+          continue; // something closer already there
+        zb = iz;
+
+        // perspective-correct normal interpolation
+        float w0 = b0 * iz0 / iz, w1 = b1 * iz1 / iz, w2 = b2 * iz2 / iz;
+        Vec3F n =
+            (N[f.at(0)] * w0 + N[f.at(1)] * w1 + N[f.at(2)] * w2).normalized();
+
+        float shade = 0.2f + 0.8f * std::abs(n.dot(light));
+        out.at(x, y) = 255.0f * shade;
+      }
     }
   }
 }

@@ -27,8 +27,9 @@ struct Face {
 class SoftRasterizerCPU {
 public:
   SoftRasterizerCPU() {}
-  void forward(PerspectiveCamera &cam, Mesh &m, Image &render);
+  void forward(Mesh &m, int view_idx);
   void backward();
+  void render_shaded(Mesh &m, int view_idx, Image &out);
 
   void add_camera(const PerspectiveCamera &cam) {
     if (m_cameras.empty()) {
@@ -37,15 +38,20 @@ public:
     }
     m_cameras.push_back(cam);
   }
-
+  void add_view(Image &&render_view) {
+    m_views.push_back(std::move(render_view));
+  }
   int get_num_cameras() const { return m_cameras.size(); }
+
+  Image &get_image(int idx) { return m_views[idx]; }
+  PerspectiveCamera &get_cam(int idx) { return m_cameras[idx]; }
 
   std::vector<Vec3F> projected_verts;
   std::vector<Face> faces;
 
   float epsilon = 1e-4;
-  float sigma = 36;
-  float inv_sigma = 1 / 36;
+  float sigma = 12.0f;
+  float inv_sigma = 1.0 / sigma;
 
   Accumulator accum;
 
@@ -53,4 +59,5 @@ private:
   int m_w;
   int m_h;
   std::vector<PerspectiveCamera> m_cameras;
+  std::vector<Image> m_views;
 };

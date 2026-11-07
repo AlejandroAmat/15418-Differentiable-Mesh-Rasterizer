@@ -14,6 +14,7 @@ public:
   float &at(int x, int y) { return m_data[y * m_w + x]; }
   float at(int x, int y) const { return m_data[y * m_w + x]; }
   void write_to_file(const std::string &f_out);
+  void read_from_file(const std::string &f_in);
 
 private:
   int m_w;

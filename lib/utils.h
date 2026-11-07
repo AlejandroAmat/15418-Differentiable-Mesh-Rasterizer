@@ -1,4 +1,9 @@
 #pragma once
+#include <cmath>
+#include <iostream>
+#define WIDTH 1600
+#define HEIGHT 1200
+#define NUM_FACES_START 3000
 
 struct Mat3 {
   float m[9];
@@ -46,6 +51,19 @@ struct Vec3F {
   float y() const { return m[1]; }
   float z() const { return m[2]; }
   Vec2F xy() const { return {m[0], m[1]}; }
+  Vec3F operator-(const Vec3F &o) const {
+    return {m[0] - o.m[0], m[1] - o.m[1], m[2] - o.m[2]};
+  }
+  float dot(const Vec3F &o) const {
+    return m[0] * o.m[0] + m[1] * o.m[1] + m[2] * o.m[2];
+  }
+  float norm() const { return std::sqrt(dot(*this)); }
+  Vec3F normalized() const { return *this * (1.0f / norm()); }
+  Vec3F cross(const Vec3F &o) const {
+    return {m[1] * o.m[2] - m[2] * o.m[1], m[2] * o.m[0] - m[0] * o.m[2],
+            m[0] * o.m[1] - m[1] * o.m[0]};
+  }
+  void print() { printf("x: %f, y:%f, z:%f", m[0], m[1], m[2]); }
 };
 
 inline void toPixelSpace(const Mat3 &K, Vec3F &p) {
