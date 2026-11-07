@@ -8,10 +8,6 @@
 
 int main() {
 
-  // For nown lets just try to create a mesh and soft rasterize it.
-  // Mesh cube_mesh;
-  // create_cube(cube_mesh, {0, -2, 10}, 2);ç
-
   SoftRasterizerCPU raster;
   int n_views = 41;
   int n_iters = 1;
@@ -19,9 +15,11 @@ int main() {
   std::string dataset = "cat";
   float scale;
   std::string path = "../data/" + dataset + "/";
-  // std::filesystem::create_directories(path + "train_views");
-  // std::filesystem::create_directories(path + "render_views");
+  std::filesystem::create_directories(path + "train_views");
+  std::filesystem::create_directories(path + "render_views");
   std::filesystem::create_directories(path + "opt_views");
+
+  bool generate = false;
 
   Mesh gt_mesh;
   load_obj(path + dataset + ".obj", gt_mesh);
@@ -31,20 +29,17 @@ int main() {
   create_sphere(opt_mesh, center, 0.7 * scale, NUM_FACES_START);
 
   std::vector<Image> gt_views;
-  // generate data
+
   for (int i = 0; i < n_views; i++) {
     // create cam
-    PerspectiveCamera cam(
-        WIDTH, HEIGHT, Mat3{1200, 0, WIDTH / 2, 0, 1200, HEIGHT / 2, 0, 0, 1});
+    PerspectiveCamera cam(WIDTH, HEIGHT,
+                          Mat3{400, 0, WIDTH / 2, 0, 400, HEIGHT / 2, 0, 0, 1});
 
     cam.set_pos({center.x(), center.y(), center.z()});
     cam.update_pos(i, n_views, scale * 1.2);
     cam.look_at(center);
 
     raster.add_camera(cam);
-
-    Image render(WIDTH, HEIGHT);
-    raster.add_view(std::move(render));
 
     Image gt(WIDTH, HEIGHT);
     gt.read_from_file(path + "train_views/out_" + std::to_string(i));
@@ -54,9 +49,15 @@ int main() {
   for (int iter = 0; iter < n_iters; iter++) {
     for (int idx = 0; idx < n_views; idx++) {
 
+      if (generate) {
+        raster.forward(gt_mesh, idx);
+        Image &render = raster.get_image();
+        render.write_to_file(path + "train_views/out_" + std::to_string(idx) +
+                             ".pgm");
+      }
       // fw
       raster.forward(opt_mesh, idx);
-      Image &render = raster.get_image(idx);
+      Image &render = raster.get_image();
       Image &gt_render = gt_views[idx];
 
       // loss

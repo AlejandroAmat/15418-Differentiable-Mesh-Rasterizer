@@ -131,11 +131,11 @@ void SoftRasterizerCPU::forward(Mesh &m, int view_idx) {
   }
 
   float alpha;
-  Image &cur_view = m_views[view_idx];
+
   for (int y = 0; y < m_h; y++) {
     for (int x = 0; x < m_w; x++) {
       alpha = 1 - accum.at(x, y);
-      cur_view.at(x, y) =
+      m_render_target.at(x, y) =
           std::round(std::min(std::max(255.0f * alpha, 0.0f), 255.0f));
     }
   }

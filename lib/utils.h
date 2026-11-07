@@ -1,8 +1,8 @@
 #pragma once
 #include <cmath>
 #include <iostream>
-#define WIDTH 1600
-#define HEIGHT 1200
+#define WIDTH 400
+#define HEIGHT 400
 #define NUM_FACES_START 3000
 
 struct Mat3 {

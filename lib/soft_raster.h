@@ -38,12 +38,10 @@ public:
     }
     m_cameras.push_back(cam);
   }
-  void add_view(Image &&render_view) {
-    m_views.push_back(std::move(render_view));
-  }
+
   int get_num_cameras() const { return m_cameras.size(); }
 
-  Image &get_image(int idx) { return m_views[idx]; }
+  Image &get_image() { return m_render_target; }
   PerspectiveCamera &get_cam(int idx) { return m_cameras[idx]; }
 
   std::vector<Vec3F> projected_verts;
@@ -59,5 +57,5 @@ private:
   int m_w;
   int m_h;
   std::vector<PerspectiveCamera> m_cameras;
-  std::vector<Image> m_views;
+  Image m_render_target{WIDTH, HEIGHT};
 };
