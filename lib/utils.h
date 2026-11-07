@@ -1,9 +1,11 @@
 #pragma once
 #include <cmath>
 #include <iostream>
+
 #define WIDTH 400
 #define HEIGHT 400
 #define NUM_FACES_START 3000
+#define BATCH_SIZE 21
 
 struct Mat3 {
   float m[9];

@@ -1,10 +1,13 @@
 #include "geometry.h"
 #include "image.h"
+#include "loss.h"
 #include "mesh.h"
 #include "persp_camera.h"
 #include "soft_raster.h"
 #include <filesystem>
 #include <iostream>
+#include <numeric>
+#include <random>
 
 int main() {
 
@@ -28,6 +31,11 @@ int main() {
   Mesh opt_mesh;
   create_sphere(opt_mesh, center, 0.7 * scale, NUM_FACES_START);
 
+  LossData loss;
+  std::vector<int> order(n_views);
+  std::iota(order.begin(), order.end(), 0);
+  std::mt19937 rng(42);
+
   std::vector<Image> gt_views;
 
   for (int i = 0; i < n_views; i++) {
@@ -47,32 +55,26 @@ int main() {
   }
 
   for (int iter = 0; iter < n_iters; iter++) {
-    for (int idx = 0; idx < n_views; idx++) {
 
-      if (generate) {
-        raster.forward(gt_mesh, idx);
-        Image &render = raster.get_image();
-        render.write_to_file(path + "train_views/out_" + std::to_string(idx) +
-                             ".pgm");
-      }
-      // fw
+    std::shuffle(order.begin(), order.end(), rng);
+    double batch_loss = 0;
+
+    for (int b = 0; b < BATCH_SIZE; b++) {
+      int idx = order[b];
       raster.forward(opt_mesh, idx);
-      Image &render = raster.get_image();
-      Image &gt_render = gt_views[idx];
+      compute_loss(raster.get_image(), gt_views[idx], loss);
+      batch_loss += loss.L2_loss;
+    }
 
-      // loss
+    // optimizer step (once per batch)
 
-      // bw
-
-      // optimizer
-
-      if (iter % 20 == 0) {
-        if (idx == 0 || idx == 7 || idx == 14 || idx == 26) {
-          Image shaded(WIDTH, HEIGHT);
-          raster.render_shaded(opt_mesh, idx, shaded);
-          shaded.write_to_file(path + "opt_views/shaded_" +
-                               std::to_string(idx) + ".pgm");
-        }
+    if (iter % 20 == 0) {
+      printf("iter %d  loss %.6f\n", iter, batch_loss);
+      for (int idx : {0, 7, 14, 26}) {
+        Image shaded(WIDTH, HEIGHT);
+        raster.render_shaded(opt_mesh, idx, shaded);
+        shaded.write_to_file(path + "opt_views/shaded_" + std::to_string(idx) +
+                             "_it" + std::to_string(iter) + ".pgm");
       }
     }
   }

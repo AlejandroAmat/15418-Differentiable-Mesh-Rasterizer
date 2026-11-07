@@ -7,7 +7,8 @@ void Image::write_to_file(const std::string &f_out) {
   f << "P5\n" << m_w << " " << m_h << "\n255\n";
   for (int y = 0; y < m_h; y++) {
     for (int x = 0; x < m_w; x++) {
-      f.put((unsigned char)at(x, y));
+      f.put((unsigned char)std::lround(std::clamp(at(x, y), 0.0f, 1.0f) *
+                                       255.0f));
     }
   }
 }

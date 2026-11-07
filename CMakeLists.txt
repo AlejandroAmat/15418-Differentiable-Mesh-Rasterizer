@@ -15,6 +15,7 @@ add_executable(diff_rast_418
   src/scene/mesh.cpp
   src/helpers/geometry.cpp
   src/core/image.cpp
+  src/optim/loss.cpp
 )
 
 target_include_directories(diff_rast_418 PRIVATE lib)
