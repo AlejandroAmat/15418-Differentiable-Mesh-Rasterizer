@@ -14,8 +14,8 @@
 #include <cstdio>
 
 int main(int argc, char **argv) {
-  float lambda = (argc > 1) ? std::stof(argv[1]) : 480.0f;
-  std::string run = (argc > 1) ? argv[1] : "480";
+  float lambda = (argc > 1) ? std::stof(argv[1]) : 420.0f;
+  std::string run = (argc > 1) ? argv[1] : "420";
 
   SoftRasterizerCPU raster;
   int n_views = 41;
@@ -24,7 +24,7 @@ int main(int argc, char **argv) {
 
   float scale;
 
-  std::string dataset = "dragon";
+  std::string dataset = "mount_dragon";
   std::string path = "../data/" + dataset + "/";
 
   std::filesystem::create_directories(path + "train_views");
@@ -33,7 +33,7 @@ int main(int argc, char **argv) {
   std::string out_dir = path + "opt_views/lambda_" + run + "/";
   std::filesystem::create_directories(out_dir);
 
-  bool generate = false;
+  bool generate = true;
 
   Mesh gt_mesh;
   load_obj(path + dataset + ".obj", gt_mesh);
@@ -59,7 +59,7 @@ int main(int argc, char **argv) {
 
   std::vector<Image> gt_views;
 
-  int last_subdiv = 0;
+  int last_subdiv = -50;
 
   for (int i = 0; i < n_views; i++) {
     // create cam
@@ -73,6 +73,7 @@ int main(int argc, char **argv) {
     raster.add_camera(cam);
 
     if (generate) {
+      raster.set_sigma(0.1f);
       raster.forward(gt_mesh, i);
       raster.get_image().write_to_file(path + "train_views/out_" +
                                        std::to_string(i) + ".pgm");
@@ -86,19 +87,22 @@ int main(int argc, char **argv) {
   for (int iter = 0; iter < n_iters; iter++) {
 
     float t = std::min(iter / 200.0f, 1.0f);
-    raster.set_sigma(12.0f * std::pow(0.1f / 12.0f, t));
+    raster.set_sigma(7.0f * std::pow(0.1f / 12.0f, t));
 
-    if (iter == 200 || iter == 400) {
+    if (iter == 160 || iter == 320) {
       opt_mesh.subdivide_midpoint();
       adjacency = build_adjacency(opt_mesh);
-      lambda *= 7;
-      lr *= 0.8f;
+      lambda *= 2;
+      lr *= 0.9;
       optim.set_lr(lr);
       last_subdiv = iter;
     }
+    if (iter > 320 && iter % 50 == 0) {
+      lambda *= 0.8;
+    }
 
     int since = iter - last_subdiv;
-    float warm = std::min(1.0f, 0.1f + since / 20.0f);
+    float warm = std::min(1.0f, 0.1f + since / 10.0f);
     optim.set_lr(lr * warm);
 
     std::shuffle(order.begin(), order.end(), rng);
