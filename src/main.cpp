@@ -19,12 +19,12 @@ int main(int argc, char **argv) {
 
   SoftRasterizerCPU raster;
   int n_views = 41;
-  int n_iters = 800;
+  int n_iters = 600;
   // 10000;
 
   float scale;
 
-  std::string dataset = "mount_dragon";
+  std::string dataset = "demon";
   std::string path = "../data/" + dataset + "/";
 
   std::filesystem::create_directories(path + "train_views");
@@ -89,7 +89,7 @@ int main(int argc, char **argv) {
     float t = std::min(iter / 200.0f, 1.0f);
     raster.set_sigma(7.0f * std::pow(0.1f / 12.0f, t));
 
-    if (iter == 160 || iter == 320) {
+    if (iter == 160 || iter == 240 || iter == 320) {
       opt_mesh.subdivide_midpoint();
       adjacency = build_adjacency(opt_mesh);
       lambda *= 2;
@@ -97,7 +97,7 @@ int main(int argc, char **argv) {
       optim.set_lr(lr);
       last_subdiv = iter;
     }
-    if (iter > 320 && iter % 50 == 0) {
+    if (iter > 400 && iter % 30 == 0) {
       lambda *= 0.8;
     }
 
