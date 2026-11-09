@@ -1,10 +1,12 @@
 #pragma once
 #include "image.h"
+#include "loss.h"
 #include "mesh.h"
 #include "persp_camera.h"
 #include <algorithm>
 #include <cmath>
 #include <vector>
+
 // we have to think of image
 struct Accumulator {
   std::vector<float> m;
@@ -17,6 +19,7 @@ struct Accumulator {
   float &at(int i, int j) { return m[i + j * _w]; }
   float at(int i, int j) const { return m[i + j * _w]; }
 };
+
 struct Face {
   Vec3I vert_idx;
   bool shown;
@@ -24,11 +27,12 @@ struct Face {
   float d;
   int bbox[4];
 };
+
 class SoftRasterizerCPU {
 public:
   SoftRasterizerCPU() {}
   void forward(Mesh &m, int view_idx);
-  void backward();
+  void backward(LossData &loss, Mesh &mesh, int idx, std::vector<Vec3F> &grads);
   void render_shaded(Mesh &m, int view_idx, Image &out);
 
   void add_camera(const PerspectiveCamera &cam) {
@@ -46,9 +50,15 @@ public:
 
   std::vector<Vec3F> projected_verts;
   std::vector<Face> faces;
+  std::vector<Vec3F> m_grad_verts;
+
+  void set_sigma(float s) {
+    sigma = s;
+    inv_sigma = 1.0f / s;
+  }
 
   float epsilon = 1e-4;
-  float sigma = 12.0f;
+  float sigma = 0.1f;
   float inv_sigma = 1.0 / sigma;
 
   Accumulator accum;

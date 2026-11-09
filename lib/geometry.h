@@ -1,5 +1,6 @@
 #pragma once
 #include "mesh.h"
+#include <algorithm>
 #include <fstream>
 #include <sstream>
 #include <string>
@@ -10,3 +11,5 @@ void create_cube(Mesh &m, Vec3F center, float scale);
 
 void load_obj(const std::string &file_in, Mesh &m);
 void create_sphere(Mesh &m, Vec3F center, float scale, int num_faces);
+
+std::vector<std::vector<int>> build_adjacency(const Mesh &m);

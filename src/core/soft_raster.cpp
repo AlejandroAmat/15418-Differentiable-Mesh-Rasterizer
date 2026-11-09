@@ -140,6 +140,107 @@ void SoftRasterizerCPU::forward(Mesh &m, int view_idx) {
   }
 }
 
+void SoftRasterizerCPU::backward(LossData &loss, Mesh &mesh, int idx,
+                                 std::vector<Vec3F> &grads) {
+  size_t num_verts = mesh.vertices().size();
+  PerspectiveCamera &cam = m_cameras[idx];
+
+  std::vector<float> gu(num_verts, 0.0f), gv(num_verts, 0.0f);
+
+  float bbox_margin = std::sqrt(sigma * std::log((1.0f - epsilon) / epsilon));
+  float margin_sq = bbox_margin * bbox_margin;
+
+  for (size_t i = 0; i < faces.size(); ++i) {
+    Face &f = faces[i];
+    if (!f.shown)
+      continue;
+
+    Vec2F v2 = projected_verts[f.vert_idx.at(2)].xy();
+    Vec2F e0 = f.e0, e1 = f.e1, e1e0 = e1 - e0;
+    float inv_d = f.d;
+    float e0_inv = 1.0f / e0.dot(e0);
+    float e1_inv = 1.0f / e1.dot(e1);
+    float e1e0_inv = 1.0f / e1e0.dot(e1e0);
+
+    for (int y = f.bbox[2]; y <= f.bbox[3]; y++) {
+      for (int x = f.bbox[0]; x <= f.bbox[1]; x++) {
+        Vec2F q = Vec2F{x + 0.5f, y + 0.5f} - v2;
+
+        float b0 = (q.x() * e1.y() - e1.x() * q.y()) * inv_d;
+        float b1 = (e0.x() * q.y() - q.x() * e0.y()) * inv_d;
+        float b2 = 1 - b0 - b1;
+        float delta = (b0 > 0 && b1 > 0 && b2 > 0) ? 1.0f : -1.0f;
+
+        float t1 = std::min(std::max(q.dot(e0) * e0_inv, 0.0f), 1.0f);
+        float t2 = std::min(std::max(q.dot(e1) * e1_inv, 0.0f), 1.0f);
+        float t3 =
+            std::min(std::max((q - e0).dot(e1e0) * e1e0_inv, 0.0f), 1.0f);
+        Vec2F dir1 = q - e0 * t1;
+        Vec2F dir2 = q - e1 * t2;
+        Vec2F dir3 = q - e0 - e1e0 * t3;
+        float d1 = dir1.dot(dir1), d2 = dir2.dot(dir2), d3 = dir3.dot(dir3);
+        float min_dist = std::min({d1, d2, d3});
+
+        if (delta < 0 && min_dist > margin_sq)
+          continue;
+
+        float D = 1.0f / (1.0f + std::exp(-delta * min_dist * inv_sigma));
+
+        // This is dL/dd^2
+        float g =
+            loss.loss_grad.at(x, y) * accum.at(x, y) * D * delta * inv_sigma;
+
+        int a, b;
+        float t;
+        Vec2F r;
+        if (d1 <= d2 && d1 <= d3) {
+          a = 2;
+          b = 0;
+          t = t1;
+          r = dir1;
+        } else if (d2 <= d3) {
+          a = 2;
+          b = 1;
+          t = t2;
+          r = dir2;
+        } else {
+          a = 0;
+          b = 1;
+          t = t3;
+          r = dir3;
+        }
+
+        // dL/da.u , dL/da.v .. b
+        int ia = f.vert_idx.at(a), ib = f.vert_idx.at(b);
+        float s = -2.0f * g;
+        gu[ia] += s * r.x() * (1 - t);
+        gv[ia] += s * r.y() * (1 - t);
+        gu[ib] += s * r.x() * t;
+        gv[ib] += s * r.y() * t;
+      }
+    }
+  }
+
+  float fx = cam.K().at(0, 0), cx = cam.K().at(0, 2);
+  float fy = cam.K().at(1, 1), cy = cam.K().at(1, 2);
+  const Mat4 &T = cam.T();
+
+  for (size_t i = 0; i < num_verts; ++i) {
+    if (gu[i] == 0.0f && gv[i] == 0.0f)
+      continue;
+    const Vec3F &p = projected_verts[i];
+    float Z = p.z();
+
+    float gX = gu[i] * fx / Z;
+    float gY = gv[i] * fy / Z;
+    float gZ = -(gu[i] * (p.x() - cx) + gv[i] * (p.y() - cy)) / Z;
+
+    grads[i] += Vec3F{T.at(0, 0) * gX + T.at(1, 0) * gY + T.at(2, 0) * gZ,
+                      T.at(0, 1) * gX + T.at(1, 1) * gY + T.at(2, 1) * gZ,
+                      T.at(0, 2) * gX + T.at(1, 2) * gY + T.at(2, 2) * gZ};
+  }
+}
+
 void SoftRasterizerCPU::render_shaded(Mesh &m, int view_idx, Image &out) {
   const auto &V = m.vertices();
   const auto &F = m.faces();
@@ -219,7 +320,7 @@ void SoftRasterizerCPU::render_shaded(Mesh &m, int view_idx, Image &out) {
             (N[f.at(0)] * w0 + N[f.at(1)] * w1 + N[f.at(2)] * w2).normalized();
 
         float shade = 0.2f + 0.8f * std::abs(n.dot(light));
-        out.at(x, y) = 255.0f * shade;
+        out.at(x, y) = shade;
       }
     }
   }

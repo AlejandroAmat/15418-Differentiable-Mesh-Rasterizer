@@ -1,5 +1,8 @@
 #pragma once
 #include "utils.h"
+#include <algorithm>
+#include <map>
+#include <utility>
 #include <vector>
 
 class Mesh {
@@ -8,7 +11,7 @@ public:
   Mesh(const std::vector<Vec3I> &faces, const std::vector<Vec3F> &vertices)
       : m_faces(faces), m_vertices(vertices), m_num_verts(vertices.size()) {}
 
-  void subdivide();
+  void subdivide_midpoint();
   void update_mesh(const std::vector<Vec3I> &faces,
                    const std::vector<Vec3F> &vertices) {
     m_vertices = vertices;

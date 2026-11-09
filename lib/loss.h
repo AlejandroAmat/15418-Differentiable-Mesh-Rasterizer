@@ -1,5 +1,6 @@
 #pragma once
 #include "image.h"
+#include "mesh.h"
 #include "utils.h"
 #include <cmath>
 
@@ -9,5 +10,9 @@ struct LossData {
 };
 
 void L2(const Image &render, const Image &gt, LossData &loss);
+
+float laplacian_smoothing(const std::vector<std::vector<int>> &adjacency,
+                          const Mesh &m, std::vector<Vec3F> &grad,
+                          float lambda);
 
 void compute_loss(const Image &render, const Image &gt, LossData &loss);

@@ -95,3 +95,19 @@ void create_sphere(Mesh &m, Vec3F center, float scale, int num_faces) {
 
   m.update_mesh(faces, verts);
 }
+
+std::vector<std::vector<int>> build_adjacency(const Mesh &m) {
+  std::vector<std::vector<int>> nbrs(m.vertices().size());
+  auto add = [&](int a, int b) {
+    if (std::find(nbrs[a].begin(), nbrs[a].end(), b) == nbrs[a].end())
+      nbrs[a].push_back(b);
+  };
+  for (const auto &f : m.faces()) {
+    for (int k = 0; k < 3; k++) {
+      int a = f.at(k), b = f.at((k + 1) % 3);
+      add(a, b);
+      add(b, a);
+    }
+  }
+  return nbrs;
+}

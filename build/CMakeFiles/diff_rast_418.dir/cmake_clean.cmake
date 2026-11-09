@@ -9,6 +9,8 @@ file(REMOVE_RECURSE
   "CMakeFiles/diff_rast_418.dir/src/main.cpp.o.d"
   "CMakeFiles/diff_rast_418.dir/src/optim/loss.cpp.o"
   "CMakeFiles/diff_rast_418.dir/src/optim/loss.cpp.o.d"
+  "CMakeFiles/diff_rast_418.dir/src/optim/optimizer.cpp.o"
+  "CMakeFiles/diff_rast_418.dir/src/optim/optimizer.cpp.o.d"
   "CMakeFiles/diff_rast_418.dir/src/scene/mesh.cpp.o"
   "CMakeFiles/diff_rast_418.dir/src/scene/mesh.cpp.o.d"
   "CMakeFiles/diff_rast_418.dir/src/scene/persp_camera.cpp.o"

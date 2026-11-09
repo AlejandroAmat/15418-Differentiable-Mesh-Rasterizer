@@ -249,6 +249,30 @@ src/optim/loss.cpp.s:
 	$(MAKE) $(MAKESILENT) -f CMakeFiles/diff_rast_418.dir/build.make CMakeFiles/diff_rast_418.dir/src/optim/loss.cpp.s
 .PHONY : src/optim/loss.cpp.s
 
+src/optim/optimizer.o: src/optim/optimizer.cpp.o
+.PHONY : src/optim/optimizer.o
+
+# target to build an object file
+src/optim/optimizer.cpp.o:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/diff_rast_418.dir/build.make CMakeFiles/diff_rast_418.dir/src/optim/optimizer.cpp.o
+.PHONY : src/optim/optimizer.cpp.o
+
+src/optim/optimizer.i: src/optim/optimizer.cpp.i
+.PHONY : src/optim/optimizer.i
+
+# target to preprocess a source file
+src/optim/optimizer.cpp.i:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/diff_rast_418.dir/build.make CMakeFiles/diff_rast_418.dir/src/optim/optimizer.cpp.i
+.PHONY : src/optim/optimizer.cpp.i
+
+src/optim/optimizer.s: src/optim/optimizer.cpp.s
+.PHONY : src/optim/optimizer.s
+
+# target to generate assembly for a file
+src/optim/optimizer.cpp.s:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/diff_rast_418.dir/build.make CMakeFiles/diff_rast_418.dir/src/optim/optimizer.cpp.s
+.PHONY : src/optim/optimizer.cpp.s
+
 src/scene/mesh.o: src/scene/mesh.cpp.o
 .PHONY : src/scene/mesh.o
 
@@ -321,6 +345,9 @@ help:
 	@echo "... src/optim/loss.o"
 	@echo "... src/optim/loss.i"
 	@echo "... src/optim/loss.s"
+	@echo "... src/optim/optimizer.o"
+	@echo "... src/optim/optimizer.i"
+	@echo "... src/optim/optimizer.s"
 	@echo "... src/scene/mesh.o"
 	@echo "... src/scene/mesh.i"
 	@echo "... src/scene/mesh.s"

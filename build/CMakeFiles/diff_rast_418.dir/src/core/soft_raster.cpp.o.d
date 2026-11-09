@@ -190,5 +190,13 @@ CMakeFiles/diff_rast_418.dir/src/core/soft_raster.cpp.o: \
  /usr/include/c++/13/bits/stl_vector.h \
  /usr/include/c++/13/bits/stl_bvector.h \
  /usr/include/c++/13/bits/vector.tcc \
+ /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/lib/loss.h \
  /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/lib/mesh.h \
+ /usr/include/c++/13/map /usr/include/c++/13/bits/stl_tree.h \
+ /usr/include/c++/13/ext/aligned_buffer.h \
+ /usr/include/c++/13/bits/node_handle.h \
+ /usr/include/c++/13/bits/stl_map.h \
+ /usr/include/c++/13/bits/stl_multimap.h \
+ /usr/include/c++/13/bits/erase_if.h /usr/include/c++/13/utility \
+ /usr/include/c++/13/bits/stl_relops.h \
  /afs/andrew.cmu.edu/usr3/aamat/private/15618/project/lib/persp_camera.h

@@ -22,5 +22,5 @@ void Image::read_from_file(const std::string &f_in) {
   m_data.resize((size_t)m_w * m_h);
   for (int y = 0; y < m_h; y++)
     for (int x = 0; x < m_w; x++)
-      at(x, y) = (unsigned char)f.get();
+      at(x, y) = (unsigned char)f.get() / 255.0f;
 }
