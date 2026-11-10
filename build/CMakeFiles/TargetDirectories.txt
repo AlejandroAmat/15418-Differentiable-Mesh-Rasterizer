@@ -1,3 +1,0 @@
-/afs/andrew.cmu.edu/usr3/aamat/private/15618/project/build/CMakeFiles/diff_rast_418.dir
-/afs/andrew.cmu.edu/usr3/aamat/private/15618/project/build/CMakeFiles/edit_cache.dir
-/afs/andrew.cmu.edu/usr3/aamat/private/15618/project/build/CMakeFiles/rebuild_cache.dir
