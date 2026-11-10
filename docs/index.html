@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Parallel Differentiable Mesh Rasterization</title>
+<style>
+  :root {
+    --bg: #fbfbfa; --fg: #1d1d1f; --muted: #5f6368; --rule: #e3e3e0;
+    --accent: #1a5fb4; --card: #ffffff; --media: #000;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #141416; --fg: #e8e8ea; --muted: #a0a3a8; --rule: #2c2c30;
+            --accent: #78aeed; --card: #1c1c1f; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--fg);
+    font: 17px/1.6 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  }
+  main { max-width: 860px; margin: 0 auto; padding: 56px 20px 80px; }
+  .course { color: var(--muted); font-size: 14px; letter-spacing: .04em; text-transform: uppercase; margin: 0 0 12px; }
+  h1 { font-size: clamp(28px, 4.4vw, 40px); line-height: 1.15; margin: 0 0 14px; letter-spacing: -.01em; }
+  .author { color: var(--muted); margin: 0 0 28px; }
+  h2 { font-size: 20px; margin: 44px 0 12px; padding-top: 18px; border-top: 1px solid var(--rule); }
+  a { color: var(--accent); }
+  .links { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 8px; padding: 0; list-style: none; }
+  .links a, .links span {
+    display: inline-block; padding: 8px 14px; border: 1px solid var(--rule); border-radius: 8px;
+    background: var(--card); text-decoration: none; font-size: 15px;
+  }
+  .links span { color: var(--muted); }
+  figure { margin: 22px 0 0; }
+  video, img { display: block; width: 100%; height: auto; border-radius: 10px; background: var(--media); }
+  figcaption { color: var(--muted); font-size: 14px; margin-top: 10px; }
+  footer { margin-top: 56px; color: var(--muted); font-size: 13px; }
+</style>
+</head>
+<body>
+<main>
+  <p class="course">15-418/618 Final Project &middot; Fall 2026</p>
+  <h1>Parallel Differentiable Mesh Rasterization for Multi-View Shape Optimization</h1>
+  <p class="author">Alejandro Amat</p>
+
+  <ul class="links">
+    <li><a href="proposal.pdf">Project Proposal (PDF)</a></li>
+    <li><span>Milestone Report &middot; Nov 23</span></li>
+    <li><span>Final Report &middot; Dec 10</span></li>
+  </ul>
+
+  <h2>Summary</h2>
+  <p>The idea is to implement an optimized parallel differentiable mesh and texture rasterizer for multi-view image input. First, creating a sequential baseline in C++, and then an optimized CUDA C++ GPU rasterizer to further analyze the forward and backward passes, subdivision, Laplacian smoothing, fused kernels, multi-GPU &amp; single-GPU batching, and a CUDA Graphs implementation in terms of execution time, throughput, and memory bandwidth. Single-GPU performance will be measured on the GHC machines, and for multi-GPU experiments I will use my lab&rsquo;s server with 8&times; NVIDIA RTX A4000 GPUs.</p>
+
+  <h2>Optimization</h2>
+  <figure>
+    <video src="assets/optimization.mp4" poster="assets/poster.jpg" autoplay loop muted playsinline controls></video>
+    <figcaption>Evolution of optimized mesh in current C++ implementation (four views). Texture optimization not implemented yet.</figcaption>
+  </figure>
+  <figure>
+    <img src="assets/sphere_to_shape.png" alt="Optimized mesh at the start, midway, and at the end of the optimization, from four views">
+    <figcaption>Evolution of optimized mesh in current C++ implementation. Texture optimization not implemented yet.</figcaption>
+  </figure>
+
+  <footer>Updates and results will be posted on this page.</footer>
+</main>
+</body>
+</html>
