@@ -6,6 +6,6 @@ This is my final project for 15-618. The plan is to make it much faster in CUDA:
 
 ## Demo
 
-Optimizing the demon mesh from a sphere (full video: [views_grid.mp4](data/demon/opt_views/lambda_420/views_grid.mp4)):
+Optimizing the demon mesh from a sphere (full video: [grid.mp4](data/demon/opt_views/lambda_420/grid.mp4)):
 
-![demon optimization](data/demon/opt_views/lambda_420/views_grid.gif)
+![demon optimization](data/demon/opt_views/lambda_420/grid.gif)
