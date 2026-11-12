@@ -24,6 +24,11 @@ public:
   const std::vector<Vec3I> &faces() const { return m_faces; }
   std::vector<Vec3I> &faces() { return m_faces; }
 
+  const std::vector<Vec3I> &faces_uvs() const { return m_faces_uvs; }
+  std::vector<Vec3I> &faces_uvs() { return m_faces_uvs; }
+
+  const std::vector<Vec2F> &uvs() const { return m_uvs; }
+  std::vector<Vec2F> &uvs() { return m_uvs; }
   const int num_verts() const { return m_num_verts; };
 
   Vec3F get_center();
@@ -32,5 +37,7 @@ public:
 private:
   std::vector<Vec3I> m_faces;
   std::vector<Vec3F> m_vertices;
+  std::vector<Vec3I> m_faces_uvs;
+  std::vector<Vec2F> m_uvs;
   int m_num_verts;
 };

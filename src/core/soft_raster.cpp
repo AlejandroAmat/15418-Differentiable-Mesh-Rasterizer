@@ -2,7 +2,7 @@
 #include <iostream>
 #include <vector>
 
-void SoftRasterizerCPU::forward(Mesh &m, int view_idx) {
+void SoftRasterizerCPU::forward(Mesh &m, const Texture &tex, int view_idx) {
 
   // Project
 
@@ -13,7 +13,15 @@ void SoftRasterizerCPU::forward(Mesh &m, int view_idx) {
   faces.resize(num_faces);
   accum.reset(m_w, m_h);
 
+  bool has_uv = !m.uvs().empty();
+
   PerspectiveCamera &cam = m_cameras[view_idx];
+
+  size_t np = (size_t)m_w * m_h;
+  float bg_logit = eps_bg / gamma;
+  m_lmax.assign(np, bg_logit);
+  m_wsum.assign(np, 0.0f);
+  m_csum.assign(3 * np, 0.0f);
 
   for (size_t i = 0; i < num_verts; ++i) {
     Vec3F projected = cam.T() * m.vertices()[i];
@@ -79,11 +87,25 @@ void SoftRasterizerCPU::forward(Mesh &m, int view_idx) {
     }
 
     Vec3F vx2 = projected_verts[cur_face.vert_idx.at(2)];
+    Vec3F vx0 = projected_verts[cur_face.vert_idx.at(0)];
+    Vec3F vx1 = projected_verts[cur_face.vert_idx.at(1)];
+
+    float iz0 = 1.0f / vx0.z(), iz1 = 1.0f / vx1.z(), iz2 = 1.0f / vx2.z();
 
     Vec2F e0 = cur_face.e0;
     Vec2F e1 = cur_face.e1;
     Vec2F e1e0 = e1 - e0;
     Vec2F v2 = vx2.xy();
+
+    bool face_uv =
+        has_uv && i < m.faces_uvs().size() && m.faces_uvs()[i].at(0) >= 0;
+    Vec2F uv0{0, 0}, uv1{0, 0}, uv2{0, 0};
+    if (face_uv) {
+      const Vec3I &fuv = m.faces_uvs()[i];
+      uv0 = m.uvs()[fuv.at(0)];
+      uv1 = m.uvs()[fuv.at(1)];
+      uv2 = m.uvs()[fuv.at(2)];
+    }
 
     float margin_sq = bbox_margin * bbox_margin;
 
@@ -126,6 +148,42 @@ void SoftRasterizerCPU::forward(Mesh &m, int view_idx) {
         float D = 1.0f / (1.0f + std::exp(-delta * min_dist * inv_sigma));
 
         accum.at(x, y) *= (1 - D);
+
+        // clamp barys
+        float c0 = std::max(b0, 0.0f), c1 = std::max(b1, 0.0f),
+              c2 = std::max(b2, 0.0f);
+        float cs = c0 + c1 + c2;
+        c0 /= cs;
+        c1 /= cs;
+        c2 /= cs;
+
+        // depth score for this pixel
+        float iz = c0 * iz0 + c1 * iz1 + c2 * iz2;
+        float z = 1.0f / iz;
+        float zn = std::clamp((z_far - z) / (z_far - z_near), 0.0f, 1.0f);
+
+        // perspective correct barys
+        float w0 = c0 * iz0 / iz, w1 = c1 * iz1 / iz, w2 = c2 * iz2 / iz;
+        Vec3F col{1, 1, 1};
+        if (face_uv) {
+          Vec2F uv = uv0 * w0 + uv1 * w1 + uv2 * w2;
+          col = tex.sample(uv.x(), uv.y());
+        }
+
+        size_t p = (size_t)y * m_w + x;
+        float logit = zn / gamma;
+        if (logit > m_lmax[p]) {
+          float s = std::exp(m_lmax[p] - logit);
+          m_wsum[p] *= s;
+          for (int c = 0; c < 3; ++c)
+            m_csum[3 * p + c] *= s;
+          m_lmax[p] = logit;
+        }
+
+        float w = D * std::exp(logit - m_lmax[p]);
+        m_wsum[p] += w;
+        for (int c = 0; c < 3; ++c)
+          m_csum[3 * p + c] += w * col.at(c);
       }
     }
   }
@@ -134,18 +192,27 @@ void SoftRasterizerCPU::forward(Mesh &m, int view_idx) {
 
   for (int y = 0; y < m_h; y++) {
     for (int x = 0; x < m_w; x++) {
-      alpha = 1 - accum.at(x, y);
-      m_render_target.at(x, y) = alpha;
+      size_t p = (size_t)y * m_w + x;
+      float wbg = std::exp(bg_logit - m_lmax[p]);
+      float inv = 1.0f / (m_wsum[p] + wbg);
+      for (int c = 0; c < 3; ++c)
+        m_render_target.at(x, y, c) =
+            (m_csum[3 * p + c] + wbg * bg_color.at(c)) * inv;
+      m_render_target.at(x, y, 3) = 1.0f - accum.at(x, y);
     }
   }
 }
 
-void SoftRasterizerCPU::backward(LossData &loss, Mesh &mesh, int idx,
-                                 std::vector<Vec3F> &grads) {
+void SoftRasterizerCPU::backward(LossData &loss, Mesh &mesh, const Texture &tex,
+                                 int idx, std::vector<Vec3F> &grads,
+                                 Image &tex_grad) {
   size_t num_verts = mesh.vertices().size();
   PerspectiveCamera &cam = m_cameras[idx];
 
   std::vector<float> gu(num_verts, 0.0f), gv(num_verts, 0.0f);
+
+  bool has_uv = !mesh.uvs().empty();
+  float bg_logit = eps_bg / gamma;
 
   float bbox_margin = std::sqrt(sigma * std::log((1.0f - epsilon) / epsilon));
   float margin_sq = bbox_margin * bbox_margin;
@@ -155,12 +222,27 @@ void SoftRasterizerCPU::backward(LossData &loss, Mesh &mesh, int idx,
     if (!f.shown)
       continue;
 
-    Vec2F v2 = projected_verts[f.vert_idx.at(2)].xy();
+    Vec3F vx0 = projected_verts[f.vert_idx.at(0)];
+    Vec3F vx1 = projected_verts[f.vert_idx.at(1)];
+    Vec3F vx2 = projected_verts[f.vert_idx.at(2)];
+
+    Vec2F v2 = vx2.xy();
     Vec2F e0 = f.e0, e1 = f.e1, e1e0 = e1 - e0;
     float inv_d = f.d;
     float e0_inv = 1.0f / e0.dot(e0);
     float e1_inv = 1.0f / e1.dot(e1);
     float e1e0_inv = 1.0f / e1e0.dot(e1e0);
+    float iz0 = 1.0f / vx0.z(), iz1 = 1.0f / vx1.z(), iz2 = 1.0f / vx2.z();
+
+    bool face_uv =
+        has_uv && i < mesh.faces_uvs().size() && mesh.faces_uvs()[i].at(0) >= 0;
+    Vec2F uv0{0, 0}, uv1{0, 0}, uv2{0, 0};
+    if (face_uv) {
+      const Vec3I &fuv = mesh.faces_uvs()[i];
+      uv0 = mesh.uvs()[fuv.at(0)];
+      uv1 = mesh.uvs()[fuv.at(1)];
+      uv2 = mesh.uvs()[fuv.at(2)];
+    }
 
     for (int y = f.bbox[2]; y <= f.bbox[3]; y++) {
       for (int x = f.bbox[0]; x <= f.bbox[1]; x++) {
@@ -188,7 +270,7 @@ void SoftRasterizerCPU::backward(LossData &loss, Mesh &mesh, int idx,
 
         // This is dL/dd^2
         float g =
-            loss.loss_grad.at(x, y) * accum.at(x, y) * D * delta * inv_sigma;
+            loss.loss_grad.at(x, y, 3) * accum.at(x, y) * D * delta * inv_sigma;
 
         int a, b;
         float t;
@@ -217,6 +299,42 @@ void SoftRasterizerCPU::backward(LossData &loss, Mesh &mesh, int idx,
         gv[ia] += s * r.y() * (1 - t);
         gu[ib] += s * r.x() * t;
         gv[ib] += s * r.y() * t;
+
+        // tex
+        if (face_uv) {
+          // recmoute uV
+          float c0 = std::max(b0, 0.0f), c1 = std::max(b1, 0.0f),
+                c2 = std::max(b2, 0.0f);
+          float cs = c0 + c1 + c2;
+          c0 /= cs;
+          c1 /= cs;
+          c2 /= cs;
+
+          float iz = c0 * iz0 + c1 * iz1 + c2 * iz2;
+          float z = 1.0f / iz;
+          float zn = std::clamp((z_far - z) / (z_far - z_near), 0.0f, 1.0f);
+
+          float w0 = c0 * iz0 / iz, w1 = c1 * iz1 / iz, w2 = c2 * iz2 / iz;
+          Vec2F uv = uv0 * w0 + uv1 * w1 + uv2 * w2;
+
+          size_t p = (size_t)y * m_w + x;
+          float w = D * std::exp(zn / gamma - m_lmax[p]);
+
+          // dpixel / dcol
+          float W = m_wsum[p] + std::exp(bg_logit - m_lmax[p]);
+          float share = w / W;
+
+          // dL / dcol, then spread to the 4 texels
+          BilinearSample bs = tex.bilinear(uv.x(), uv.y());
+          for (int c = 0; c < 3; ++c) {
+            float gc = loss.loss_grad.at(x, y, c) *
+                       share; // dL/dcol_j,c (dL/Dpixel * dpixel/dcol)
+            if (gc == 0.0f)
+              continue;
+            for (int k = 0; k < 4; ++k)
+              tex_grad.at(bs.x[k], bs.y[k], c) += gc * bs.w[k];
+          }
+        }
       }
     }
   }
@@ -241,9 +359,14 @@ void SoftRasterizerCPU::backward(LossData &loss, Mesh &mesh, int idx,
   }
 }
 
-void SoftRasterizerCPU::render_shaded(Mesh &m, int view_idx, Image &out) {
+// LLM-generated to check correct behaviour of meshes
+void SoftRasterizerCPU::render_shaded(Mesh &m, const Texture &tex, int view_idx,
+                                      Image &out) {
   const auto &V = m.vertices();
   const auto &F = m.faces();
+  const auto &UV = m.uvs();
+  const auto &FUV = m.faces_uvs();
+  bool has_uv = !UV.empty();
   PerspectiveCamera &cam = m_cameras[view_idx];
 
   // vertex normals: sum of unnormalized face normals (= area weighted)
@@ -261,25 +384,26 @@ void SoftRasterizerCPU::render_shaded(Mesh &m, int view_idx, Image &out) {
       n = n * (1.0f / l);
   }
 
-  // light: from the camera, tilted a bit from above
   const Mat4 &T = cam.T();
-  Vec3F to_cam{-T.at(2, 0), -T.at(2, 1), -T.at(2, 2)}; // -forward
+  Vec3F to_cam{-T.at(2, 0), -T.at(2, 1), -T.at(2, 2)};
   Vec3F light = (to_cam + Vec3F{0, 1, 0} * 0.7f).normalized();
 
-  // project
   std::vector<Vec3F> P(V.size());
   for (size_t i = 0; i < V.size(); ++i) {
     P[i] = cam.T() * V[i];
     toPixelSpace(cam.K(), P[i]);
   }
 
-  // z-buffer stores 1/z (0 = background, bigger = closer)
   std::vector<float> zinv(m_w * m_h, 0.0f);
   for (int y = 0; y < m_h; y++)
-    for (int x = 0; x < m_w; x++)
-      out.at(x, y) = 0.0f;
+    for (int x = 0; x < m_w; x++) {
+      for (int c = 0; c < 3; c++)
+        out.at(x, y, c) = 1.0f; // white
+      out.at(x, y, 3) = 1.0f;   // opaque
+    }
 
-  for (const auto &f : F) {
+  for (size_t t = 0; t < F.size(); ++t) { // need t to index faces_uvs
+    const Vec3I &f = F[t];
     const Vec3F &p0 = P[f.at(0)], &p1 = P[f.at(1)], &p2 = P[f.at(2)];
     if (p0.z() <= 0 || p1.z() <= 0 || p2.z() <= 0)
       continue;
@@ -299,6 +423,16 @@ void SoftRasterizerCPU::render_shaded(Mesh &m, int view_idx, Image &out) {
 
     float iz0 = 1.0f / p0.z(), iz1 = 1.0f / p1.z(), iz2 = 1.0f / p2.z();
 
+    // this face's 3 corner UVs (if it has them)
+    bool face_uv =
+        has_uv && t < m.faces_uvs().size() && m.faces_uvs()[t].at(0) >= 0;
+    Vec2F uv0{0, 0}, uv1{0, 0}, uv2{0, 0};
+    if (face_uv) {
+      const Vec3I &fuv = m.faces_uvs()[t];
+      uv0 = m.uvs()[fuv.at(0)];
+      uv1 = m.uvs()[fuv.at(1)];
+      uv2 = m.uvs()[fuv.at(2)];
+    }
     for (int y = y0; y <= y1; y++) {
       for (int x = x0; x <= x1; x++) {
         Vec2F q = Vec2F{x + 0.5f, y + 0.5f} - p2.xy();
@@ -311,16 +445,25 @@ void SoftRasterizerCPU::render_shaded(Mesh &m, int view_idx, Image &out) {
         float iz = b0 * iz0 + b1 * iz1 + b2 * iz2;
         float &zb = zinv[y * m_w + x];
         if (iz <= zb)
-          continue; // something closer already there
+          continue;
         zb = iz;
 
-        // perspective-correct normal interpolation
+        // perspective-correct weights (same ones for normals and UVs)
         float w0 = b0 * iz0 / iz, w1 = b1 * iz1 / iz, w2 = b2 * iz2 / iz;
         Vec3F n =
             (N[f.at(0)] * w0 + N[f.at(1)] * w1 + N[f.at(2)] * w2).normalized();
-
         float shade = 0.2f + 0.8f * std::abs(n.dot(light));
-        out.at(x, y) = shade;
+
+        Vec3F albedo{1, 1, 1};
+        if (face_uv) {
+          Vec2F uv = uv0 * w0 + uv1 * w1 + uv2 * w2;
+          albedo = tex.sample(uv.x(), uv.y());
+        }
+
+        out.at(x, y, 0) = albedo.x() * shade;
+        out.at(x, y, 1) = albedo.y() * shade;
+        out.at(x, y, 2) = albedo.z() * shade;
+        out.at(x, y, 3) = 1.0f;
       }
     }
   }

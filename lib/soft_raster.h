@@ -3,6 +3,7 @@
 #include "loss.h"
 #include "mesh.h"
 #include "persp_camera.h"
+#include "texture.h"
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -31,8 +32,12 @@ struct Face {
 class SoftRasterizerCPU {
 public:
   SoftRasterizerCPU() {}
-  void forward(Mesh &m, int view_idx);
-  void backward(LossData &loss, Mesh &mesh, int idx, std::vector<Vec3F> &grads);
+  void forward(Mesh &m, const Texture &tex, int view_idx);
+  void backward(LossData &loss, Mesh &mesh, const Texture &tex, int idx,
+                std::vector<Vec3F> &grads, Image &tex_grad);
+
+  void render_shaded(Mesh &m, const Texture &tex, int view_idx, Image &out);
+
   void render_shaded(Mesh &m, int view_idx, Image &out);
 
   void add_camera(const PerspectiveCamera &cam) {
@@ -63,9 +68,15 @@ public:
 
   Accumulator accum;
 
+  std::vector<float> m_lmax, m_wsum, m_csum;
+  float gamma = 1e-4f;
+  float eps_bg = 1e-3f;
+  float z_near = 0.1f, z_far = 2.5f;
+  Vec3F bg_color{1, 1, 1};
+
 private:
   int m_w;
   int m_h;
   std::vector<PerspectiveCamera> m_cameras;
-  Image m_render_target{WIDTH, HEIGHT};
+  Image m_render_target{WIDTH, HEIGHT, 4};
 };

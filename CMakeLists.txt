@@ -17,6 +17,7 @@ add_executable(diff_rast_418
   src/core/image.cpp
   src/optim/loss.cpp
   src/optim/optimizer.cpp
+  src/core/texture.cpp
 )
 
 target_include_directories(diff_rast_418 PRIVATE lib)

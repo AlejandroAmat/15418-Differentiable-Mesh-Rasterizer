@@ -22,6 +22,7 @@ void create_cube(Mesh &m, Vec3F center, float scale) {
   m.update_mesh(cube_faces, verts);
 }
 
+// LLM-generated
 void load_obj(const std::string &file_in, Mesh &m) {
   std::ifstream f(file_in);
   if (!f)
@@ -29,11 +30,20 @@ void load_obj(const std::string &file_in, Mesh &m) {
 
   auto &verts = m.vertices();
   auto &faces = m.faces();
+  auto &uvs = m.uvs();
+  auto &faces_uvs = m.faces_uvs();
   verts.clear();
   faces.clear();
+  uvs.clear();
+  faces_uvs.clear();
+
+  // OBJ indices are 1-based, negative = relative to end; -1 = missing
+  auto fix = [](int idx, size_t n) {
+    return (idx < 0) ? (int)n + idx : idx - 1;
+  };
 
   std::string line;
-  std::vector<int> poly;
+  std::vector<int> poly, poly_uv;
   while (std::getline(f, line)) {
     std::istringstream ss(line);
     std::string tag;
@@ -43,16 +53,31 @@ void load_obj(const std::string &file_in, Mesh &m) {
       float x, y, z;
       ss >> x >> y >> z;
       verts.push_back({x, y, z});
+    } else if (tag == "vt") {
+      float u, v;
+      ss >> u >> v;
+      uvs.push_back({u, 1.0f - v}); // flip so v=0 is the top image row
     } else if (tag == "f") {
       poly.clear();
+      poly_uv.clear();
       std::string tok;
       while (ss >> tok) {
-        int idx = std::stoi(tok.substr(0, tok.find('/')));
-        idx = (idx < 0) ? (int)verts.size() + idx : idx - 1;
-        poly.push_back(idx);
+        // tok: "v", "v/vt", "v//vn" or "v/vt/vn"
+        size_t s1 = tok.find('/');
+        poly.push_back(fix(std::stoi(tok.substr(0, s1)), verts.size()));
+
+        int ti = -1;
+        if (s1 != std::string::npos && s1 + 1 < tok.size() &&
+            tok[s1 + 1] != '/') {
+          size_t s2 = tok.find('/', s1 + 1);
+          ti = fix(std::stoi(tok.substr(s1 + 1, s2 - s1 - 1)), uvs.size());
+        }
+        poly_uv.push_back(ti);
       }
-      for (size_t k = 1; k + 1 < poly.size(); ++k)
+      for (size_t k = 1; k + 1 < poly.size(); ++k) {
         faces.push_back({poly[0], poly[k], poly[k + 1]});
+        faces_uvs.push_back({poly_uv[0], poly_uv[k], poly_uv[k + 1]});
+      }
     }
   }
 }
@@ -94,6 +119,61 @@ void create_sphere(Mesh &m, Vec3F center, float scale, int num_faces) {
     faces.push_back({ring(stacks - 1, j), ring(stacks - 1, j + 1), bottom});
 
   m.update_mesh(faces, verts);
+}
+
+// LLM generated
+void compute_sphere_uvs(Mesh &m, const Vec3F &center) {
+  const auto &V = m.vertices();
+  const auto &F = m.faces();
+  auto &uvs = m.uvs();
+  auto &fuv = m.faces_uvs();
+  uvs.clear();
+  fuv.clear();
+  uvs.reserve(3 * F.size());
+  fuv.reserve(F.size());
+
+  for (size_t t = 0; t < F.size(); ++t) {
+    float u[3], v[3];
+    bool pole[3];
+
+    // (1) equirectangular: direction -> (longitude, latitude)
+    for (int k = 0; k < 3; ++k) {
+      Vec3F d = (V[F[t].at(k)] - center).normalized();
+      u[k] = 0.5f + std::atan2(d.z(), d.x()) / (2.0f * (float)M_PI);
+      v[k] = 0.5f - std::asin(std::clamp(d.y(), -1.0f, 1.0f)) / (float)M_PI;
+      pole[k] = std::abs(d.y()) > 0.9999f;
+    }
+
+    // (2) seam: if corners straddle u=1 -> u=0, shift the small ones by +1
+    float umax = -1e9f;
+    for (int k = 0; k < 3; ++k)
+      if (!pole[k])
+        umax = std::max(umax, u[k]);
+    for (int k = 0; k < 3; ++k)
+      if (!pole[k] && umax - u[k] > 0.5f)
+        u[k] += 1.0f;
+
+    // (3) poles: longitude is undefined there, use the other corners' average
+    for (int k = 0; k < 3; ++k) {
+      if (!pole[k])
+        continue;
+      float s = 0;
+      int n = 0;
+      for (int j = 0; j < 3; ++j)
+        if (!pole[j]) {
+          s += u[j];
+          n++;
+        }
+      if (n > 0)
+        u[k] = s / n;
+    }
+
+    // (4) every corner gets its own UV entry
+    int base = (int)uvs.size();
+    for (int k = 0; k < 3; ++k)
+      uvs.push_back({u[k], v[k]});
+    fuv.push_back({base, base + 1, base + 2});
+  }
 }
 
 std::vector<std::vector<int>> build_adjacency(const Mesh &m) {

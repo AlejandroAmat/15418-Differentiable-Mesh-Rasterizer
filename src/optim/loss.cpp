@@ -1,22 +1,31 @@
 #include "loss.h"
 
-void L2(const Image &render, const Image &gt, LossData &loss) {
-  double accum = 0;
-  float pix_dif;
-  float inv_N = 1.0 / (WIDTH * HEIGHT * BATCH_SIZE);
+void L2(const Image &render, const Image &gt, LossData &loss, float w_rgb) {
+  double acc_a = 0, acc_rgb = 0;
+  float inv_N = 1.0f / (WIDTH * HEIGHT * BATCH_SIZE);
+
   for (int y = 0; y < HEIGHT; y++) {
     for (int x = 0; x < WIDTH; x++) {
-      pix_dif = render.at(x, y) - gt.at(x, y);
-      accum += pix_dif * pix_dif;
+      // silhouette (alpha)
+      float da = render.at(x, y, 3) - gt.at(x, y, 3);
+      acc_a += da * da;
+      loss.loss_grad.at(x, y, 3) = inv_N * 2 * da;
 
-      loss.loss_grad.at(x, y) = inv_N * 2 * pix_dif;
+      // color
+      for (int c = 0; c < 3; ++c) {
+        float dc = render.at(x, y, c) - gt.at(x, y, c);
+        acc_rgb += dc * dc;
+        loss.loss_grad.at(x, y, c) = w_rgb * inv_N * 2 * dc;
+      }
     }
   }
-  loss.L2_loss = accum * inv_N;
+  loss.L2_loss = acc_a * inv_N;
+  loss.L2_rgb = w_rgb * acc_rgb * inv_N;
 }
 
-void compute_loss(const Image &render, const Image &gt, LossData &loss) {
-  L2(render, gt, loss);
+void compute_loss(const Image &render, const Image &gt, LossData &loss,
+                  float w_rgb) {
+  L2(render, gt, loss, w_rgb);
 }
 float laplacian_smoothing(const std::vector<std::vector<int>> &adjacency,
                           const Mesh &m, std::vector<Vec3F> &grad,

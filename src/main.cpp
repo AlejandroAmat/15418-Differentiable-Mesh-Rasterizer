@@ -5,13 +5,13 @@
 #include "optimizer.h"
 #include "persp_camera.h"
 #include "soft_raster.h"
+#include "texture.h"
+#include <chrono>
+#include <cstdio>
 #include <filesystem>
 #include <iostream>
 #include <numeric>
 #include <random>
-
-#include <chrono>
-#include <cstdio>
 
 int main(int argc, char **argv) {
   float lambda = (argc > 1) ? std::stof(argv[1]) : 420.0f;
@@ -43,10 +43,22 @@ int main(int argc, char **argv) {
 
   Vec3F center{0, 0, 0};
   scale = 1.0f;
+  Texture gt_tex;
+  gt_tex.load(path + "material_0.png");
 
   Mesh opt_mesh;
   create_sphere(opt_mesh, center, 0.8 * scale, NUM_FACES_START);
+  compute_sphere_uvs(opt_mesh, center);
   std::vector<std::vector<int>> adjacency = build_adjacency(opt_mesh);
+
+  Texture opt_tex;
+  opt_tex.init(512, 512, 0.5f);
+
+  Image tex_grad(opt_tex.get_w(), opt_tex.get_h(), 3);
+  float lr_tex = 0.02f;
+  Adam tex_optim(lr_tex);
+
+  int tex_start = 50;
 
   LossData loss;
   std::vector<int> order(n_views);
@@ -74,13 +86,13 @@ int main(int argc, char **argv) {
 
     if (generate) {
       raster.set_sigma(0.1f);
-      raster.forward(gt_mesh, i);
-      raster.get_image().write_to_file(path + "train_views/out_" +
-                                       std::to_string(i) + ".pgm");
+      raster.forward(gt_mesh, gt_tex, i);
+      raster.get_image().write_png(path + "train_views/out_" +
+                                   std::to_string(i) + ".png");
     }
 
-    Image gt(WIDTH, HEIGHT);
-    gt.read_from_file(path + "train_views/out_" + std::to_string(i) + ".pgm");
+    Image gt(WIDTH, HEIGHT, 4);
+    gt.read_png(path + "train_views/out_" + std::to_string(i) + ".png");
     gt_views.push_back(std::move(gt));
   }
 
@@ -107,33 +119,40 @@ int main(int argc, char **argv) {
 
     std::shuffle(order.begin(), order.end(), rng);
     double batch_loss = 0;
+    double batch_rgb = 0;
     grad.assign(opt_mesh.vertices().size(), Vec3F{0, 0, 0});
+    tex_grad.fill(0.0f);
 
     for (int b = 0; b < BATCH_SIZE; b++) {
 
       int idx = order[b];
-      raster.forward(opt_mesh, idx);
+      raster.forward(opt_mesh, opt_tex, idx);
 
-      compute_loss(raster.get_image(), gt_views[idx], loss);
+      float w_rgb = (iter >= tex_start) ? 1.0f : 0.0f;
+      compute_loss(raster.get_image(), gt_views[idx], loss, w_rgb);
       batch_loss += loss.L2_loss;
+      batch_rgb += loss.L2_rgb;
 
-      raster.backward(loss, opt_mesh, idx, grad);
+      raster.backward(loss, opt_mesh, opt_tex, idx, grad, tex_grad);
     }
 
     float lapl_loss = laplacian_smoothing(adjacency, opt_mesh, grad, lambda);
 
     optim.step(opt_mesh.vertices(), grad);
-    // subdivision...Maybe
+    if (iter >= tex_start)
+      tex_optim.step(&opt_tex.image().at(0, 0), &tex_grad.at(0, 0),
+                     (size_t)opt_tex.get_w() * opt_tex.get_h() * 3);
 
     if (iter % 5 == 0) {
       printf("iter %d  loss %.6f\n", iter, batch_loss);
       printf("iter %d  loss_lapl %.6f\n", iter, lapl_loss);
+      printf("iter %d  loss_tex %.6f\n", iter, batch_rgb);
       for (int idx : {0, 7, 14, 26}) {
 
-        Image shaded(WIDTH, HEIGHT);
-        raster.render_shaded(opt_mesh, idx, shaded);
-        shaded.write_to_file(out_dir + "shaded_" + std::to_string(idx) + "_f" +
-                             std::to_string(iter / 5) + ".pgm");
+        Image shaded(WIDTH, HEIGHT, 4);
+        raster.render_shaded(opt_mesh, opt_tex, idx, shaded);
+        shaded.write_png(out_dir + "shaded_" + std::to_string(idx) + "_f" +
+                         std::to_string(iter / 5) + ".png");
       }
     }
   }

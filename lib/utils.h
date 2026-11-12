@@ -92,3 +92,36 @@ typedef struct {
   int &at(int i) { return m[i]; }
   int at(int i) const { return m[i]; }
 } Vec3I;
+
+struct Vec4F {
+  float m[4];
+  float &at(int i) { return m[i]; }
+  float at(int i) const { return m[i]; }
+  Vec4F operator*(float s) const {
+    return {m[0] * s, m[1] * s, m[2] * s, m[3] * s};
+  }
+  Vec4F operator+(const Vec4F &o) const {
+    return {m[0] + o.m[0], m[1] + o.m[1], m[2] + o.m[2], m[3] + o.m[3]};
+  }
+  Vec4F operator-(const Vec4F &o) const {
+    return {m[0] - o.m[0], m[1] - o.m[1], m[2] - o.m[2], m[3] - o.m[3]};
+  }
+  Vec4F &operator+=(const Vec4F &o) {
+    m[0] += o.m[0];
+    m[1] += o.m[1];
+    m[2] += o.m[2];
+    m[3] += o.m[3];
+    return *this;
+  }
+  float x() const { return m[0]; }
+  float y() const { return m[1]; }
+  float z() const { return m[2]; }
+  float w() const { return m[3]; }
+  Vec3F xyz() const { return {m[0], m[1], m[2]}; }
+  static Vec4F from(const Vec3F &v, float w) {
+    return {v.m[0], v.m[1], v.m[2], w};
+  }
+  float dot(const Vec4F &o) const {
+    return m[0] * o.m[0] + m[1] * o.m[1] + m[2] * o.m[2] + m[3] * o.m[3];
+  }
+};
