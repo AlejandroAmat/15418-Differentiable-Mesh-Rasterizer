@@ -20,6 +20,8 @@ public:
   float at(int x, int y, int ch = 0) const {
     return m_data[(y * m_w + x) * m_c + ch];
   }
+  float *data() { return m_data.data(); };
+  const float *data() const { return m_data.data(); };
   void write_to_file(const std::string &f_out);
   void read_from_file(const std::string &f_in);
   void write_png(const std::string &f_out) const;

@@ -1,3 +1,4 @@
+#include "device_buffer.h"
 #include "geometry.h"
 #include "image.h"
 #include "loss.h"
@@ -5,6 +6,7 @@
 #include "optimizer.h"
 #include "persp_camera.h"
 #include "soft_raster.h"
+#include "structs_cu.h"
 #include "texture.h"
 #include <chrono>
 #include <cstdio>
@@ -12,7 +14,6 @@
 #include <iostream>
 #include <numeric>
 #include <random>
-
 int main(int argc, char **argv) {
   float lambda = (argc > 1) ? std::stof(argv[1]) : 420.0f;
   std::string run = (argc > 1) ? argv[1] : "420";
@@ -23,6 +24,8 @@ int main(int argc, char **argv) {
   // 10000;
 
   float scale;
+
+  bool USE_CUDE = true;
 
   std::string dataset = "demon";
   std::string path = "../data/" + dataset + "/";
