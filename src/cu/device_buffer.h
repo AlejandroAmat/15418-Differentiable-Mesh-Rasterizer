@@ -6,7 +6,7 @@ template <typename T> struct DeviceBuffer {
   T *ptr = nullptr;
   size_t n = 0;
 
-  DeviceBuffer();
+  DeviceBuffer() = default;
   ~DeviceBuffer() { cudaFree(ptr); }
 
   void resize(size_t count) {

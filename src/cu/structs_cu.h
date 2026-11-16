@@ -1,6 +1,7 @@
 #pragma once
 #include "device_buffer.h"
 #include "mesh.h"
+#include "persp_camera.h"
 #include "texture.h"
 #include "utils.h"
 
@@ -34,7 +35,7 @@ struct MeshCUDA {
   }
 };
 
-struct TextureGPU {
+struct TextureCUDA {
 
   DeviceBuffer<float> data;
   DeviceBuffer<float> grads;
@@ -53,5 +54,26 @@ struct TextureGPU {
 
   void get_from_device(Texture &tex) {
     data.get_from_device(tex.image().data());
+  }
+};
+
+struct CameraCUDA {
+  float fx, fy, cx, cy;
+  float R[9];
+  float t[3];
+
+  void from_cam(const PerspectiveCamera &cam) {
+    fx = cam.K().at(0, 0);
+    fy = cam.K().at(1, 1);
+    cx = cam.K().at(0, 2);
+    cy = cam.K().at(1, 2);
+
+    const Mat4 &T = cam.T();
+    for (int i = 0; i < 3; i++) {
+      for (int j = 0; j < 3; j++) {
+        R[i * 3 + j] = T.at(i, j);
+      }
+      t[i] = T.at(i, 3); // last col
+    }
   }
 };

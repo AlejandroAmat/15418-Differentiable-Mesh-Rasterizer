@@ -6,6 +6,7 @@
 #include "optimizer.h"
 #include "persp_camera.h"
 #include "soft_raster.h"
+#include "soft_raster_cu.h"
 #include "structs_cu.h"
 #include "texture.h"
 #include <chrono>
@@ -14,18 +15,21 @@
 #include <iostream>
 #include <numeric>
 #include <random>
+
 int main(int argc, char **argv) {
   float lambda = (argc > 1) ? std::stof(argv[1]) : 420.0f;
   std::string run = (argc > 1) ? argv[1] : "420";
 
   SoftRasterizerCPU raster;
+  SoftRasterizerCUDA cuda_raster;
+
   int n_views = 41;
   int n_iters = 600;
   // 10000;
 
   float scale;
 
-  bool USE_CUDE = true;
+  bool USE_CUDA = true;
 
   std::string dataset = "demon";
   std::string path = "../data/" + dataset + "/";
@@ -38,6 +42,7 @@ int main(int argc, char **argv) {
 
   bool generate = true;
 
+  // GT
   Mesh gt_mesh;
   load_obj(path + dataset + ".obj", gt_mesh);
   Vec3F c = gt_mesh.get_center_bbox(scale);
@@ -49,32 +54,44 @@ int main(int argc, char **argv) {
   Texture gt_tex;
   gt_tex.load(path + "material_0.png");
 
+  //------- Optim ----------
+  // :::::Mesh:::
+  // host
   Mesh opt_mesh;
   create_sphere(opt_mesh, center, 0.8 * scale, NUM_FACES_START);
   compute_sphere_uvs(opt_mesh, center);
   std::vector<std::vector<int>> adjacency = build_adjacency(opt_mesh);
+  std::vector<Vec3F> grad(opt_mesh.vertices().size());
+  // device
+  MeshCUDA opt_mesh_device;
 
+  //:::::::::::::::
+  //::::Text::::::
+  // host
   Texture opt_tex;
   opt_tex.init(512, 512, 0.5f);
-
   Image tex_grad(opt_tex.get_w(), opt_tex.get_h(), 3);
+  TextureCUDA opt_tex_device;
+
+  // ADAM params
   float lr_tex = 0.02f;
   Adam tex_optim(lr_tex);
+  float lr = 0.0060f;
+  Adam optim(lr);
 
   int tex_start = 50;
-
   LossData loss;
+
+  // random batches
   std::vector<int> order(n_views);
   std::iota(order.begin(), order.end(), 0);
   std::mt19937 rng(42);
 
-  float lr = 0.0060f;
-  Adam optim(lr);
-  std::vector<Vec3F> grad(opt_mesh.vertices().size());
-
+  // GT
   std::vector<Image> gt_views;
 
   int last_subdiv = -50;
+  std::vector<CameraCUDA> device_cams;
 
   for (int i = 0; i < n_views; i++) {
     // create cam
@@ -87,6 +104,10 @@ int main(int argc, char **argv) {
 
     raster.add_camera(cam);
 
+    CameraCUDA device_cam;
+    device_cam.from_cam(cam);
+    device_cams.push_back(device_cam);
+
     if (generate) {
       raster.set_sigma(0.1f);
       raster.forward(gt_mesh, gt_tex, i);
@@ -97,6 +118,10 @@ int main(int argc, char **argv) {
     Image gt(WIDTH, HEIGHT, 4);
     gt.read_png(path + "train_views/out_" + std::to_string(i) + ".png");
     gt_views.push_back(std::move(gt));
+  }
+
+  if (USE_CUDA) {
+    cuda_raster.add_cameras(device_cams);
   }
 
   for (int iter = 0; iter < n_iters; iter++) {
