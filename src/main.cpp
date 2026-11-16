@@ -20,6 +20,8 @@ int main(int argc, char **argv) {
   float lambda = (argc > 1) ? std::stof(argv[1]) : 420.0f;
   std::string run = (argc > 1) ? argv[1] : "420";
 
+  int CUDA_BATCH_SIZE = 1;
+
   SoftRasterizerCPU raster;
   SoftRasterizerCUDA cuda_raster{WIDTH, HEIGHT, 1};
 
@@ -133,6 +135,7 @@ int main(int argc, char **argv) {
     raster.set_sigma(7.0f * std::pow(0.1f / 12.0f, t));
     cuda_raster.set_sigma(7.0f * std::pow(0.1f / 12.0f, t));
 
+    //-------------subdivision updates--------------
     if (iter == 160 || iter == 240 || iter == 320) {
       opt_mesh.subdivide_midpoint();
       adjacency = build_adjacency(opt_mesh);
@@ -148,6 +151,7 @@ int main(int argc, char **argv) {
     int since = iter - last_subdiv;
     float warm = std::min(1.0f, 0.1f + since / 10.0f);
     optim.set_lr(lr * warm);
+    //------------------------------------------------
 
     std::shuffle(order.begin(), order.end(), rng);
     double batch_loss = 0;
@@ -155,10 +159,15 @@ int main(int argc, char **argv) {
     grad.assign(opt_mesh.vertices().size(), Vec3F{0, 0, 0});
     tex_grad.fill(0.0f);
 
-    for (int b = 0; b < BATCH_SIZE; b++) {
+    //---------------------------------------------------
+
+    int rounds = BATCH_SIZE / CUDA_BATCH_SIZE;
+
+    for (int b = 0; b < rounds; b += CUDA_BATCH_SIZE) {
 
       int idx = order[b];
       raster.forward(opt_mesh, opt_tex, idx);
+      cuda_raster.forward(opt_mesh_device, opt_tex_device, order);
 
       float w_rgb = (iter >= tex_start) ? 1.0f : 0.0f;
       compute_loss(raster.get_image(), gt_views[idx], loss, w_rgb);

@@ -18,3 +18,6 @@ void SoftRasterizerCUDA::init_allocate(int total_views, int num_faces) {
 
   m_faces_data.resize(m_batch * num_faces);
 }
+
+void SoftRasterizerCUDA::forward(MeshCUDA &mesh, TextureCUDA &tex,
+                                 std::vector<int> &index) {}

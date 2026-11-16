@@ -24,6 +24,8 @@ public:
   void cuda_free(); // free all that data... wont be necessary with device
                     // bufefr implementation
 
+  void forward(MeshCUDA &mesh, TextureCUDA &tex, std::vector<int> &index);
+
   void set_sigma(float sigma) {
     m_params.sigma = sigma;
     m_params.inv_sigma = 1.0f / sigma;
