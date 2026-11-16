@@ -21,7 +21,7 @@ int main(int argc, char **argv) {
   std::string run = (argc > 1) ? argv[1] : "420";
 
   SoftRasterizerCPU raster;
-  SoftRasterizerCUDA cuda_raster;
+  SoftRasterizerCUDA cuda_raster{WIDTH, HEIGHT, 1};
 
   int n_views = 41;
   int n_iters = 600;
@@ -40,7 +40,7 @@ int main(int argc, char **argv) {
   std::string out_dir = path + "opt_views/lambda_" + run + "/";
   std::filesystem::create_directories(out_dir);
 
-  bool generate = true;
+  bool generate = false;
 
   // GT
   Mesh gt_mesh;
@@ -122,12 +122,16 @@ int main(int argc, char **argv) {
 
   if (USE_CUDA) {
     cuda_raster.add_cameras(device_cams);
+    opt_tex_device.upload_to_device(opt_tex);
+    opt_mesh_device.upload_to_device(opt_mesh);
+    cuda_raster.init_allocate(n_views, (int)opt_mesh.faces().size());
   }
 
   for (int iter = 0; iter < n_iters; iter++) {
 
     float t = std::min(iter / 200.0f, 1.0f);
     raster.set_sigma(7.0f * std::pow(0.1f / 12.0f, t));
+    cuda_raster.set_sigma(7.0f * std::pow(0.1f / 12.0f, t));
 
     if (iter == 160 || iter == 240 || iter == 320) {
       opt_mesh.subdivide_midpoint();

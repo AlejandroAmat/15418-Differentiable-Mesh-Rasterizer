@@ -62,9 +62,9 @@ public:
     inv_sigma = 1.0f / s;
   }
 
-  float epsilon = 1e-4;
+  float epsilon = 1e-4f;
   float sigma = 0.1f;
-  float inv_sigma = 1.0 / sigma;
+  float inv_sigma = 1.0f / sigma;
 
   Accumulator accum;
 
