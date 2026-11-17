@@ -6,25 +6,38 @@
 #include "texture.h"
 #include "utils.cuh"
 #include "utils.h"
+
 #include <vector>
+#define BLOCK_SIZE 256
+#define BLOCK_X 16
+#define BLOCK_Y 16
 
 struct RasterParamsDevice {
   float sigma;
   float inv_sigma;
+  int num_views;
+  int views[BATCH_SIZE];
+  int w;
+  int h;
 };
 
 class SoftRasterizerCUDA {
 
 public:
   SoftRasterizerCUDA(int w, int h, int batch = 1)
-      : m_w(w), m_h(h), m_batch(batch){};
+      : m_w(w), m_h(h), m_batch(batch) {
+    m_params.w = w;
+    m_params.h = h;
+    m_params.num_views = batch;
+  };
 
   void init_allocate(int total_views, int num_faces);
   void add_cameras(const std::vector<CameraCUDA> &cams);
   void cuda_free(); // free all that data... wont be necessary with device
                     // bufefr implementation
 
-  void forward(MeshCUDA &mesh, TextureCUDA &tex, std::vector<int> &index);
+  void forward(MeshCUDA &mesh, TextureCUDA &tex, std::vector<int> &index,
+               int start);
 
   void set_sigma(float sigma) {
     m_params.sigma = sigma;
@@ -39,6 +52,19 @@ private:
   DeviceBuffer<float> m_wsum;
   DeviceBuffer<float> m_gt_images;
   DeviceBuffer<FaceData> m_faces_data;
+  DeviceBuffer<int> m_tiles_touched;
+  DeviceBuffer<short> m_bbox;
+
+  DeviceBuffer<char> m_temp_cub;
+  size_t m_scan_bytes = 0;
+  size_t m_sort_bytes = 0;
+
+  DeviceBuffer<int> m_pair_keys;
+  DeviceBuffer<int> m_pair_faces;
+  DeviceBuffer<int> m_pair_faces_sorted;
+  DeviceBuffer<int> m_pair_keys_sorted;
+
+  DeviceBuffer<int> m_ranges;
 
   RasterParamsDevice m_params;
 };

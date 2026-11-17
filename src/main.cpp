@@ -20,10 +20,10 @@ int main(int argc, char **argv) {
   float lambda = (argc > 1) ? std::stof(argv[1]) : 420.0f;
   std::string run = (argc > 1) ? argv[1] : "420";
 
-  int CUDA_BATCH_SIZE = 1;
+  int CUDA_BATCH_SIZE = 20;
 
   SoftRasterizerCPU raster;
-  SoftRasterizerCUDA cuda_raster{WIDTH, HEIGHT, 1};
+  SoftRasterizerCUDA cuda_raster{WIDTH, HEIGHT, CUDA_BATCH_SIZE};
 
   int n_views = 41;
   int n_iters = 600;
@@ -32,6 +32,7 @@ int main(int argc, char **argv) {
   float scale;
 
   bool USE_CUDA = true;
+  bool USE_CPP = true;
 
   std::string dataset = "demon";
   std::string path = "../data/" + dataset + "/";
@@ -163,38 +164,61 @@ int main(int argc, char **argv) {
 
     int rounds = BATCH_SIZE / CUDA_BATCH_SIZE;
 
-    for (int b = 0; b < rounds; b += CUDA_BATCH_SIZE) {
+    for (int b = 0; b < rounds; ++b) {
 
-      int idx = order[b];
-      raster.forward(opt_mesh, opt_tex, idx);
-      cuda_raster.forward(opt_mesh_device, opt_tex_device, order);
-
-      float w_rgb = (iter >= tex_start) ? 1.0f : 0.0f;
-      compute_loss(raster.get_image(), gt_views[idx], loss, w_rgb);
-      batch_loss += loss.L2_loss;
-      batch_rgb += loss.L2_rgb;
-
-      raster.backward(loss, opt_mesh, opt_tex, idx, grad, tex_grad);
-    }
-
-    float lapl_loss = laplacian_smoothing(adjacency, opt_mesh, grad, lambda);
-
-    optim.step(opt_mesh.vertices(), grad);
-    if (iter >= tex_start)
-      tex_optim.step(&opt_tex.image().at(0, 0), &tex_grad.at(0, 0),
-                     (size_t)opt_tex.get_w() * opt_tex.get_h() * 3);
-
-    if (iter % 5 == 0) {
-      printf("iter %d  loss %.6f\n", iter, batch_loss);
-      printf("iter %d  loss_lapl %.6f\n", iter, lapl_loss);
-      printf("iter %d  loss_tex %.6f\n", iter, batch_rgb);
-      for (int idx : {0, 7, 14, 26}) {
-
-        Image shaded(WIDTH, HEIGHT, 4);
-        raster.render_shaded(opt_mesh, opt_tex, idx, shaded);
-        shaded.write_png(out_dir + "shaded_" + std::to_string(idx) + "_f" +
-                         std::to_string(iter / 5) + ".png");
+      auto start_gpu = std::chrono::high_resolution_clock::now();
+      if (USE_CUDA)
+        // GPU
+        cuda_raster.forward(opt_mesh_device, opt_tex_device, order,
+                            b * CUDA_BATCH_SIZE);
+      cudaDeviceSynchronize();
+      auto end_gpu_fwd = std::chrono::high_resolution_clock::now();
+      auto start_cpu = std::chrono::high_resolution_clock::now();
+      if (USE_CPP) {
+        for (int i = 0; i < CUDA_BATCH_SIZE; ++i) {
+          // cpu
+          int idx = order[b * CUDA_BATCH_SIZE + i];
+          raster.forward(opt_mesh, opt_tex, idx);
+        }
       }
+      auto end_cpu_fwd = std::chrono::high_resolution_clock::now();
+
+      auto duration_gpu = std::chrono::duration_cast<std::chrono::milliseconds>(
+          end_gpu_fwd - start_gpu);
+
+      auto duration_cpu = std::chrono::duration_cast<std::chrono::milliseconds>(
+          end_cpu_fwd - start_cpu);
+
+      std::cout << "CPU: " << duration_cpu.count()
+                << "\n GPU: " << duration_gpu.count() << std::endl;
+
+      //////
+      // float w_rgb = (iter >= tex_start) ? 1.0f : 0.0f;
+      // compute_loss(raster.get_image(), gt_views[idx], loss, w_rgb);
+      // batch_loss += loss.L2_loss;
+      // batch_rgb += loss.L2_rgb;
+
+      // raster.backward(loss, opt_mesh, opt_tex, idx, grad, tex_grad);
     }
+
+    // float lapl_loss = laplacian_smoothing(adjacency, opt_mesh, grad, lambda);
+
+    // optim.step(opt_mesh.vertices(), grad);
+    // if (iter >= tex_start)
+    //   tex_optim.step(&opt_tex.image().at(0, 0), &tex_grad.at(0, 0),
+    //                  (size_t)opt_tex.get_w() * opt_tex.get_h() * 3);
+
+    // if (iter % 5 == 0) {
+    //   printf("iter %d  loss %.6f\n", iter, batch_loss);
+    //   printf("iter %d  loss_lapl %.6f\n", iter, lapl_loss);
+    //   printf("iter %d  loss_tex %.6f\n", iter, batch_rgb);
+    //   for (int idx : {0, 7, 14, 26}) {
+
+    //     Image shaded(WIDTH, HEIGHT, 4);
+    //     raster.render_shaded(opt_mesh, opt_tex, idx, shaded);
+    //     shaded.write_png(out_dir + "shaded_" + std::to_string(idx) + "_f" +
+    //                      std::to_string(iter / 5) + ".png");
+    //   }
+    // }
   }
 }

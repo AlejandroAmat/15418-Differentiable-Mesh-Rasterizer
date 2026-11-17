@@ -11,6 +11,4 @@ struct __align__(16) FaceData {
   float iz0, iz1, iz2;
   float2 e0, e1;
   float inv_d;
-  int bbox[4];
-  int shown;
 };
