@@ -20,7 +20,7 @@ int main(int argc, char **argv) {
   float lambda = (argc > 1) ? std::stof(argv[1]) : 420.0f;
   std::string run = (argc > 1) ? argv[1] : "420";
 
-  int CUDA_BATCH_SIZE = 20;
+  int CUDA_BATCH_SIZE = 1;
 
   SoftRasterizerCPU raster;
   SoftRasterizerCUDA cuda_raster{WIDTH, HEIGHT, CUDA_BATCH_SIZE};
@@ -32,7 +32,7 @@ int main(int argc, char **argv) {
   float scale;
 
   bool USE_CUDA = true;
-  bool USE_CPP = true;
+  bool USE_CPP = false;
 
   std::string dataset = "demon";
   std::string path = "../data/" + dataset + "/";
@@ -163,17 +163,17 @@ int main(int argc, char **argv) {
     //---------------------------------------------------
 
     int rounds = BATCH_SIZE / CUDA_BATCH_SIZE;
-
+    auto start_gpu = std::chrono::high_resolution_clock::now();
     for (int b = 0; b < rounds; ++b) {
 
-      auto start_gpu = std::chrono::high_resolution_clock::now();
+      // auto start_gpu = std::chrono::high_resolution_clock::now();
       if (USE_CUDA)
         // GPU
         cuda_raster.forward(opt_mesh_device, opt_tex_device, order,
                             b * CUDA_BATCH_SIZE);
-      cudaDeviceSynchronize();
+
       auto end_gpu_fwd = std::chrono::high_resolution_clock::now();
-      auto start_cpu = std::chrono::high_resolution_clock::now();
+      // auto start_cpu = std::chrono::high_resolution_clock::now();
       if (USE_CPP) {
         for (int i = 0; i < CUDA_BATCH_SIZE; ++i) {
           // cpu
@@ -183,14 +183,27 @@ int main(int argc, char **argv) {
       }
       auto end_cpu_fwd = std::chrono::high_resolution_clock::now();
 
-      auto duration_gpu = std::chrono::duration_cast<std::chrono::milliseconds>(
-          end_gpu_fwd - start_gpu);
+      // auto duration_gpu =
+      // std::chrono::duration_cast<std::chrono::milliseconds>(
+      //     end_gpu_fwd - start_gpu);
 
-      auto duration_cpu = std::chrono::duration_cast<std::chrono::milliseconds>(
-          end_cpu_fwd - start_cpu);
+      // auto duration_cpu =
+      // std::chrono::duration_cast<std::chrono::milliseconds>(
+      //     end_cpu_fwd - start_cpu);
 
-      std::cout << "CPU: " << duration_cpu.count()
-                << "\n GPU: " << duration_gpu.count() << std::endl;
+      // std::cout << "CPU: " << duration_cpu.count()
+      //           << "\n GPU: " << duration_gpu.count() << std::endl;
+
+      cudaDeviceSynchronize();
+      // if (iter == 0) {
+
+      //   for (int i = 0; i < CUDA_BATCH_SIZE; i++) {
+      //     Image out(WIDTH, HEIGHT, 4);
+      //     cuda_raster.get_image(i, out);
+      //     out.write_png(out_dir + "test" + std::to_string(i) + "_f" +
+      //     ".png");
+      //   }
+      // }
 
       //////
       // float w_rgb = (iter >= tex_start) ? 1.0f : 0.0f;
@@ -200,7 +213,11 @@ int main(int argc, char **argv) {
 
       // raster.backward(loss, opt_mesh, opt_tex, idx, grad, tex_grad);
     }
+    auto end_gpu_fwd = std::chrono::high_resolution_clock::now();
+    auto duration_gpu = std::chrono::duration_cast<std::chrono::milliseconds>(
+        end_gpu_fwd - start_gpu);
 
+    std::cout << "\n GPU: " << duration_gpu.count() << std::endl;
     // float lapl_loss = laplacian_smoothing(adjacency, opt_mesh, grad, lambda);
 
     // optim.step(opt_mesh.vertices(), grad);

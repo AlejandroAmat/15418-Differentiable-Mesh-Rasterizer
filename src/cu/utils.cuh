@@ -7,8 +7,9 @@ constexpr float Z_FAR = 2.5f;
 constexpr float BG_R = 1.0f; // always white so R is enough
 
 struct __align__(16) FaceData {
-  float2 p0, p1, p2;
+  float2 p2;
   float iz0, iz1, iz2;
   float2 e0, e1;
   float inv_d;
+  float e0_inv, e1_inv, e0e1_inv;
 };

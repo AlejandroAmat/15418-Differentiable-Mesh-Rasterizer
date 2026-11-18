@@ -5,7 +5,7 @@
 
 #define WIDTH 400
 #define HEIGHT 400
-#define NUM_FACES_START 3000
+#define NUM_FACES_START 48000
 #define BATCH_SIZE 20
 #define MAX_CAMS 60
 

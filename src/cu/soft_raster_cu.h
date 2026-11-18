@@ -44,6 +44,11 @@ public:
     m_params.inv_sigma = 1.0f / sigma;
   }
 
+  void get_image(int num, Image &img) {
+    size_t px = m_w * m_h * 4;
+    m_render_targets.copy_from_device(&img.at(0, 0), num * px, px);
+  }
+
 private:
   int m_w, m_h, m_batch;
   DeviceBuffer<float> m_render_targets;
