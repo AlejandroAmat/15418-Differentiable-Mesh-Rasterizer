@@ -98,8 +98,9 @@ int main(int argc, char **argv) {
 
   for (int i = 0; i < n_views; i++) {
     // create cam
-    PerspectiveCamera cam(WIDTH, HEIGHT,
-                          Mat3{400, 0, WIDTH / 2, 0, 400, HEIGHT / 2, 0, 0, 1});
+    PerspectiveCamera cam(
+        WIDTH, HEIGHT,
+        Mat3{WIDTH, 0, WIDTH / 2, 0, HEIGHT, HEIGHT / 2, 0, 0, 1});
 
     cam.set_pos({center.x(), center.y(), center.z()});
     cam.update_pos(i, n_views, scale * 1.2);
@@ -127,7 +128,8 @@ int main(int argc, char **argv) {
     cuda_raster.add_cameras(device_cams);
     opt_tex_device.upload_to_device(opt_tex);
     opt_mesh_device.upload_to_device(opt_mesh);
-    cuda_raster.init_allocate(n_views, (int)opt_mesh.faces().size(), gt_views);
+    cuda_raster.init_allocate(n_views, (int)opt_mesh.faces().size(), gt_views,
+                              opt_mesh.vertices().size());
   }
 
   for (int iter = 0; iter < n_iters; iter++) {
@@ -160,58 +162,38 @@ int main(int argc, char **argv) {
     grad.assign(opt_mesh.vertices().size(), Vec3F{0, 0, 0});
     tex_grad.fill(0.0f);
 
+    float w_rgb = (iter >= tex_start) ? 1.0f : 0.0f;
+
     //---------------------------------------------------
 
     int rounds = BATCH_SIZE / CUDA_BATCH_SIZE;
     auto start_gpu = std::chrono::high_resolution_clock::now();
     for (int b = 0; b < rounds; ++b) {
 
-      // auto start_gpu = std::chrono::high_resolution_clock::now();
-      if (USE_CUDA)
+      if (USE_CUDA) {
         // GPU
         cuda_raster.forward(opt_mesh_device, opt_tex_device, order,
                             b * CUDA_BATCH_SIZE);
+        cuda_raster.backward(opt_mesh_device, opt_tex_device, order,
+                             b * CUDA_BATCH_SIZE, w_rgb);
+      }
 
-      auto end_gpu_fwd = std::chrono::high_resolution_clock::now();
-      // auto start_cpu = std::chrono::high_resolution_clock::now();
       if (USE_CPP) {
         for (int i = 0; i < CUDA_BATCH_SIZE; ++i) {
           // cpu
           int idx = order[b * CUDA_BATCH_SIZE + i];
           raster.forward(opt_mesh, opt_tex, idx);
+
+          compute_loss(raster.get_image(), gt_views[idx], loss, w_rgb);
+          batch_loss += loss.L2_loss;
+          batch_rgb += loss.L2_rgb;
+
+          raster.backward(loss, opt_mesh, opt_tex, idx, grad, tex_grad);
         }
       }
-      auto end_cpu_fwd = std::chrono::high_resolution_clock::now();
-
-      // auto duration_gpu =
-      // std::chrono::duration_cast<std::chrono::milliseconds>(
-      //     end_gpu_fwd - start_gpu);
-
-      // auto duration_cpu =
-      // std::chrono::duration_cast<std::chrono::milliseconds>(
-      //     end_cpu_fwd - start_cpu);
-
-      // std::cout << "CPU: " << duration_cpu.count()
-      //           << "\n GPU: " << duration_gpu.count() << std::endl;
-
-      cudaDeviceSynchronize();
-      if (iter == 0) {
-
-        for (int i = 0; i < CUDA_BATCH_SIZE; i++) {
-          Image out(WIDTH, HEIGHT, 4);
-          cuda_raster.get_image(i, out);
-          out.write_png(out_dir + "test" + std::to_string(i) + "_f" + ".png");
-        }
-      }
-
-      //////
-      // float w_rgb = (iter >= tex_start) ? 1.0f : 0.0f;
-      // compute_loss(raster.get_image(), gt_views[idx], loss, w_rgb);
-      // batch_loss += loss.L2_loss;
-      // batch_rgb += loss.L2_rgb;
-
-      // raster.backward(loss, opt_mesh, opt_tex, idx, grad, tex_grad);
     }
+
+    cudaDeviceSynchronize();
     auto end_gpu_fwd = std::chrono::high_resolution_clock::now();
     auto duration_gpu = std::chrono::duration_cast<std::chrono::milliseconds>(
         end_gpu_fwd - start_gpu);

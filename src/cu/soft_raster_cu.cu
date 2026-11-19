@@ -11,7 +11,8 @@ void SoftRasterizerCUDA::add_cameras(const std::vector<CameraCUDA> &cams) {
 }
 
 void SoftRasterizerCUDA::init_allocate(int total_views, int num_faces,
-                                       std::vector<Image> &gt_images) {
+                                       std::vector<Image> &gt_images,
+                                       int num_verts) {
 
   m_render_targets.resize(m_w * m_h * 4 * m_batch);
 
@@ -40,6 +41,8 @@ void SoftRasterizerCUDA::init_allocate(int total_views, int num_faces,
   int tiles_x = (m_w + BLOCK_X - 1) / BLOCK_X;
   int tiles_y = (m_h + BLOCK_Y - 1) / BLOCK_Y;
   m_ranges.resize(tiles_x * tiles_y * 2 * m_batch);
+
+  m_uv_grads.resize(num_verts * 2 * m_batch);
 }
 
 __device__ __forceinline__ float3 to_pixel(const CameraCUDA &c, float3 v) {
@@ -407,11 +410,224 @@ __global__ void render(int *ranges, int *faces_sorted, FaceData *face_data,
   }
 }
 
+__global__ void bwd_render(int *ranges, int *faces_sorted, FaceData *face_data,
+                           RasterParamsDevice params, float *render_targets,
+                           float *accums, float *lmax, float *wsum,
+                           int num_faces, float *texture, int *faces_uvs,
+                           float *uvs, int text_w, int text_h, short *bbox,
+                           float *text_grads, float *mesh_grads,
+                           float *gt_images, float w_rgb, int num_verts,
+                           int *faces) {
+
+  int view_id = blockIdx.z;
+  int thread_id = threadIdx.y * BLOCK_X + threadIdx.x;
+  int px = threadIdx.x + blockIdx.x * BLOCK_X;
+  int py = threadIdx.y + blockIdx.y * BLOCK_Y;
+  int global_pix = params.w * params.h * view_id + py * params.w + px;
+  int key_id =
+      view_id * gridDim.x * gridDim.y + blockIdx.y * gridDim.x + blockIdx.x;
+
+  float2 pix_center = make_float2(px + 0.5f, py + 0.5f);
+
+  int start = ranges[key_id * 2];
+  int end = ranges[key_id * 2 + 1];
+
+  __shared__ FaceData s_face[LOAD_PHASE];
+  __shared__ int s_face_id[LOAD_PHASE];
+  __shared__ short4 s_bbox[LOAD_PHASE];
+  __shared__ float2 s_uv[LOAD_PHASE][3];
+  __shared__ int3 s_vidx[LOAD_PHASE];
+
+  bool only_loads_shared = (py >= params.h || px >= params.w);
+  int gt_id =
+      (params.w * params.h * params.views[view_id] + py * params.w + px) * 4;
+
+  float dLdA = 0.f, dLdR = 0.f, dLdG = 0.f, dLdB = 0.f, accum = 0.f;
+  float _lmax, _wsum;
+  float W_inv;
+
+  // we compute the loss in bwd kernel to avoid launching a new kernel
+  if (!only_loads_shared) {
+    float4 p_render = *(float4 *)(&render_targets[global_pix * 4]);
+    float4 gt = *(const float4 *)(&gt_images[gt_id]);
+
+    accum = accums[global_pix];
+    _lmax = lmax[global_pix];
+    _wsum = wsum[global_pix];
+
+    W_inv = 1.0f / (_wsum + expf(BG_LOGIT - _lmax));
+
+    float s = params.inv_n * 2;
+    dLdA = s * (p_render.w - gt.w);
+    dLdR = s * (p_render.x - gt.x);
+    dLdG = s * (p_render.y - gt.y);
+    dLdB = s * (p_render.z - gt.z);
+  }
+
+  float margin_sq = params.sigma * logf((1.0f - EPSILON) / EPSILON);
+
+  while (start < end) {
+
+    int cur_end = min(start + LOAD_PHASE, end);
+
+    __syncthreads();
+
+    if (thread_id < cur_end - start) {
+      s_face_id[thread_id] = faces_sorted[start + thread_id];
+      s_face[thread_id] = face_data[view_id * num_faces + s_face_id[thread_id]];
+      s_bbox[thread_id] =
+          *(const short4
+                *)(&bbox[(view_id * num_faces + s_face_id[thread_id]) * 4]);
+      int3 fuv = *(int3 *)(&faces_uvs[s_face_id[thread_id] * 3]);
+      s_uv[thread_id][0] = *(float2 *)(&uvs[fuv.x * 2]);
+      s_uv[thread_id][1] = *(float2 *)(&uvs[fuv.y * 2]);
+      s_uv[thread_id][2] = *(float2 *)(&uvs[fuv.z * 2]);
+
+      s_vidx[thread_id] = *(const int3 *)(&faces[s_face_id[thread_id] * 3]);
+    }
+
+    __syncthreads();
+
+    if (!only_loads_shared) {
+      for (int i = 0; i < cur_end - start; i++) {
+
+        short4 b = s_bbox[i];
+        if (px < b.x || px >= b.y || py < b.z || py >= b.w)
+          continue;
+
+        const float2 &p2 = s_face[i].p2;
+        float2 q = make_float2(pix_center.x - p2.x, pix_center.y - p2.y);
+
+        const FaceData &f = s_face[i];
+
+        float b0 = (q.x * f.e1.y - f.e1.x * q.y) * f.inv_d;
+        float b1 = (f.e0.x * q.y - q.x * f.e0.y) * f.inv_d;
+        float b2 = 1.0f - b0 - b1;
+        int delta = (b0 > 0 && b1 > 0 && b2 > 0) ? 1 : -1;
+
+        float2 e1e0 = sub(f.e1, f.e0);
+
+        float t1 = fminf(fmaxf(dot(q, f.e0) * f.e0_inv, 0.0f), 1.0f);
+        float t2 = fminf(fmaxf(dot(q, f.e1) * f.e1_inv, 0.0f), 1.0f);
+        float t3 =
+            fminf(fmaxf(dot(sub(q, f.e0), e1e0) * f.e0e1_inv, 0.0f), 1.0f);
+
+        float2 dir1 = sub(q, mul(f.e0, t1));
+        float2 dir2 = sub(q, mul(f.e1, t2));
+        float2 dir3 = sub(sub(q, f.e0), mul(e1e0, t3));
+
+        float d1 = dot(dir1, dir1);
+        float d2 = dot(dir2, dir2);
+        float d3 = dot(dir3, dir3);
+
+        float min_dist = fminf(d1, fminf(d2, d3));
+
+        if (delta < 0 && min_dist > margin_sq)
+          continue;
+
+        float D = 1.0f / (1.0f + expf(-delta * min_dist * params.inv_sigma));
+
+        float g = dLdA * accum * D * delta * params.inv_sigma;
+
+        int3 vid = s_vidx[i];
+
+        int ia, ib;
+        float t;
+        float2 r;
+
+        if (d1 <= d2 && d1 <= d3) {
+          ia = vid.z;
+          ib = vid.x;
+          t = t1;
+          r = dir1;
+        } else if (d2 <= d3) {
+          ia = vid.z;
+          ib = vid.y;
+          t = t2;
+          r = dir2;
+        } else {
+          ia = vid.x;
+          ib = vid.y;
+          t = t3;
+          r = dir3;
+        }
+
+        float s = -2.0f * g;
+        float sry = s * r.y;
+        float srx = s * r.x;
+
+        float *ga = &mesh_grads[((size_t)view_id * num_verts + ia) * 2];
+        float *gb = &mesh_grads[((size_t)view_id * num_verts + ib) * 2];
+
+        atomicAdd(&ga[0], srx * (1.0f - t));
+        atomicAdd(&ga[1], sry * (1.0f - t));
+        atomicAdd(&gb[0], srx * t);
+        atomicAdd(&gb[1], sry * t);
+
+        // texture
+        float c0 = fmaxf(b0, 0.0f);
+        float c1 = fmaxf(b1, 0.0f);
+        float c2 = fmaxf(b2, 0.0f);
+
+        float cs = 1 / (c0 + c1 + c2);
+        c0 *= cs;
+        c1 *= cs;
+        c2 *= cs;
+
+        float iz = c0 * f.iz0 + c1 * f.iz1 + c2 * f.iz2;
+        float z = 1.0f / iz;
+        float zn = fminf(fmaxf((Z_FAR - z) / (Z_FAR - Z_NEAR), 0.0f), 1.0f);
+
+        float w0 = c0 * f.iz0 * z;
+        float w1 = c1 * f.iz1 * z;
+        float w2 = c2 * f.iz2 * z;
+
+        float2 uv0 = s_uv[i][0], uv1 = s_uv[i][1], uv2 = s_uv[i][2];
+        float2 uv = make_float2(uv0.x * w0 + uv1.x * w1 + uv2.x * w2,
+                                uv0.y * w0 + uv1.y * w1 + uv2.y * w2);
+
+        float logit = zn / GAMMA;
+        float w = D * expf(logit - _lmax);
+
+        float share = w * W_inv;
+
+        // bilinear code (same as samlpe)
+        float u = uv.x - floorf(uv.x);
+        float v = uv.y - floorf(uv.y);
+
+        float fx = u * text_w - 0.5f, fy = v * text_h - 0.5f;
+        int x0 = (int)floorf(fx), y0 = (int)floorf(fy);
+        float tx = fx - x0, ty = fy - y0;
+
+        int x1 = wrap_idx(x0 + 1, text_w), y1 = wrap_idx(y0 + 1, text_h);
+        x0 = wrap_idx(x0, text_w);
+        y0 = wrap_idx(y0, text_h);
+
+        float gc[3] = {dLdR * share, dLdG * share, dLdB * share};
+
+        int idx[4] = {(y0 * text_w + x0) * 3, (y0 * text_w + x1) * 3,
+                      (y1 * text_w + x0) * 3, (y1 * text_w + x1) * 3};
+        float bw[4] = {(1.0f - tx) * (1.0f - ty), tx * (1.0f - ty),
+                       (1.0f - tx) * ty, tx * ty};
+
+#pragma unroll
+        for (int k = 0; k < 4; ++k) {
+#pragma unroll
+          for (int c = 0; c < 3; ++c) {
+            atomicAdd(&text_grads[idx[k] + c], gc[c] * bw[k]);
+          }
+        }
+      }
+    }
+    start += LOAD_PHASE;
+  }
+}
+
 void SoftRasterizerCUDA::forward(MeshCUDA &mesh, TextureCUDA &tex,
                                  std::vector<int> &index, int start) {
 
   int faces = mesh.n_faces;
-  // mesh.faces.resize() & restart accum
+  // mesh.faces.resize() & restart accum & face_data etc etc
   for (int i = 0; i < m_batch; i++) {
     m_params.views[i] = index[start + i];
   }
@@ -475,4 +691,34 @@ void SoftRasterizerCUDA::forward(MeshCUDA &mesh, TextureCUDA &tex,
       tex.data.ptr, mesh.faces_uvs.ptr, mesh.uvs.ptr, tex.w, tex.h, m_bbox.ptr);
   ////------------------------------------////
   // views are rendered
+}
+
+void SoftRasterizerCUDA::backward(MeshCUDA &mesh, TextureCUDA &tex,
+                                  std::vector<int> &index, int start,
+                                  float w_rgb) {
+
+  int faces = mesh.n_faces;
+  int verts = mesh.n_verts;
+
+  for (int i = 0; i < m_batch; i++) {
+    m_params.views[i] = index[start + i];
+  }
+
+  mesh.grads.set_zero();
+  tex.grads.set_zero();
+  m_uv_grads.set_zero();
+
+  int tiles_x = (m_w + BLOCK_X - 1) / BLOCK_X;
+  int tiles_y = (m_h + BLOCK_Y - 1) / BLOCK_Y;
+  dim3 block_tiled(BLOCK_X, BLOCK_Y);
+  dim3 grid_tiled(tiles_x, tiles_y, m_batch);
+
+  bwd_render<<<grid_tiled, block_tiled>>>(
+      m_ranges.ptr, m_pair_faces_sorted.ptr, m_faces_data.ptr, m_params,
+      m_render_targets.ptr, m_accums.ptr, m_lmax.ptr, m_wsum.ptr, faces,
+      tex.data.ptr, mesh.faces_uvs.ptr, mesh.uvs.ptr, tex.w, tex.h, m_bbox.ptr,
+      tex.grads.ptr, m_uv_grads.ptr, m_gt_images.ptr, w_rgb, verts,
+      mesh.faces.ptr);
+
+  // bwd : uv_to_vertex
 }

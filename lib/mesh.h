@@ -29,7 +29,7 @@ public:
 
   const std::vector<Vec2F> &uvs() const { return m_uvs; }
   std::vector<Vec2F> &uvs() { return m_uvs; }
-  int num_verts() const { return m_num_verts; };
+  int num_verts() const { return (int)m_vertices.size(); };
 
   Vec3F get_center();
   Vec3F get_center_bbox(float &scale);
