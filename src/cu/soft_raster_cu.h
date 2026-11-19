@@ -19,6 +19,7 @@ struct RasterParamsDevice {
   int views[BATCH_SIZE];
   int w;
   int h;
+  float bg_color = 1.0;
 };
 
 class SoftRasterizerCUDA {

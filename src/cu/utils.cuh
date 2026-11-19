@@ -2,6 +2,7 @@
 constexpr float EPSILON = 1e-4f;
 constexpr float GAMMA = 1e-4f;
 constexpr float EPS_BG = 1e-3f;
+constexpr float BG_LOGIT = EPS_BG / GAMMA;
 constexpr float Z_NEAR = 0.1f;
 constexpr float Z_FAR = 2.5f;
 constexpr float BG_R = 1.0f; // always white so R is enough

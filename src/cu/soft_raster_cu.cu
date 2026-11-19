@@ -218,6 +218,35 @@ __global__ void identify_ranges(int *keys, int *ranges, int total_faces_pairs) {
   }
 }
 
+__device__ __forceinline__ int wrap_idx(int i, int n) {
+  return ((i % n) + n) % n;
+}
+__device__ __forceinline__ float3 sample(float2 uv, const float *texture,
+                                         int text_h, int text_w) {
+  float u = uv.x - floorf(uv.x);
+  float v = uv.y - floorf(uv.y);
+
+  float fx = u * text_w - 0.5f, fy = v * text_h - 0.5f;
+  int x0 = (int)floorf(fx), y0 = (int)floorf(fy);
+  float tx = fx - x0, ty = fy - y0;
+
+  int x1 = wrap_idx(x0 + 1, text_w), y1 = wrap_idx(y0 + 1, text_h);
+  x0 = wrap_idx(x0, text_w);
+  y0 = wrap_idx(y0, text_h);
+
+  const float *p00 = texture + (y0 * text_w + x0) * 3;
+  const float *p10 = texture + (y0 * text_w + x1) * 3;
+  const float *p01 = texture + (y1 * text_w + x0) * 3;
+  const float *p11 = texture + (y1 * text_w + x1) * 3;
+
+  float w00 = (1.0f - tx) * (1.0f - ty), w10 = tx * (1.0f - ty);
+  float w01 = (1.0f - tx) * ty, w11 = tx * ty;
+
+  return make_float3(w00 * p00[0] + w10 * p10[0] + w01 * p01[0] + w11 * p11[0],
+                     w00 * p00[1] + w10 * p10[1] + w01 * p01[1] + w11 * p11[1],
+                     w00 * p00[2] + w10 * p10[2] + w01 * p01[2] + w11 * p11[2]);
+}
+
 __global__ void render(int *ranges, int *faces_sorted, FaceData *face_data,
                        RasterParamsDevice params, float *render_targets,
                        float *accums, float *lmax, float *wsum, int num_faces,
@@ -232,7 +261,7 @@ __global__ void render(int *ranges, int *faces_sorted, FaceData *face_data,
   int key_id =
       view_id * gridDim.x * gridDim.y + blockIdx.y * gridDim.x + blockIdx.x;
 
-  float2 pix_center = make_float2(px + 0.5, py + 0.5);
+  float2 pix_center = make_float2(px + 0.5f, py + 0.5f);
 
   int start = ranges[key_id * 2];
   int end = ranges[key_id * 2 + 1];
@@ -242,12 +271,16 @@ __global__ void render(int *ranges, int *faces_sorted, FaceData *face_data,
   __shared__ FaceData s_face[LOAD_PHASE];
   __shared__ int s_face_id[LOAD_PHASE];
   __shared__ short4 s_bbox[LOAD_PHASE];
-  // __shared__ float2 s_uv[BLOCK_X * BLOCK_Y][3];
+  __shared__ float2 s_uv[LOAD_PHASE][3];
 
   float4 *render_ptr = (float4 *)(&render_targets[global_pix * 4]);
 
   float margin_sq = params.sigma * logf((1.0f - EPSILON) / EPSILON);
   float accum = 1.0f;
+
+  float _lmax = BG_LOGIT;
+  float _wsum = 0.0f;
+  float3 _csum = make_float3(0.0f, 0.0f, 0.0f);
 
   while (start < end) {
 
@@ -261,6 +294,10 @@ __global__ void render(int *ranges, int *faces_sorted, FaceData *face_data,
       s_bbox[thread_id] =
           *(const short4
                 *)(&bbox[(view_id * num_faces + s_face_id[thread_id]) * 4]);
+      int3 fuv = *(int3 *)(&faces_uvs[s_face_id[thread_id] * 3]);
+      s_uv[thread_id][0] = *(float2 *)(&uvs[fuv.x * 2]);
+      s_uv[thread_id][1] = *(float2 *)(&uvs[fuv.y * 2]);
+      s_uv[thread_id][2] = *(float2 *)(&uvs[fuv.z * 2]);
     }
 
     __syncthreads();
@@ -301,13 +338,64 @@ __global__ void render(int *ranges, int *faces_sorted, FaceData *face_data,
 
         float D = 1.0f / (1.0f + expf(-delta * min_dist * params.inv_sigma));
         accum *= (1.0f - D);
+
+        float c0 = fmaxf(b0, 0.0f);
+        float c1 = fmaxf(b1, 0.0f);
+        float c2 = fmaxf(b2, 0.0f);
+
+        float cs = 1 / (c0 + c1 + c2);
+        c0 *= cs;
+        c1 *= cs;
+        c2 *= cs;
+
+        float iz = c0 * f.iz0 + c1 * f.iz1 + c2 * f.iz2;
+        float z = 1.0f / iz;
+        float zn = fminf(fmaxf((Z_FAR - z) / (Z_FAR - Z_NEAR), 0.0f), 1.0f);
+
+        float w0 = c0 * f.iz0 * z;
+        float w1 = c1 * f.iz1 * z;
+        float w2 = c2 * f.iz2 * z;
+
+        float2 uv0 = s_uv[i][0], uv1 = s_uv[i][1], uv2 = s_uv[i][2];
+        float2 uv = make_float2(uv0.x * w0 + uv1.x * w1 + uv2.x * w2,
+                                uv0.y * w0 + uv1.y * w1 + uv2.y * w2);
+        // sample
+        float3 color = sample(uv, texture, text_h, text_w);
+
+        float logit = zn / GAMMA;
+        if (logit > _lmax) {
+          float s = expf(_lmax - logit);
+          _wsum *= s;
+          _csum.x *= s;
+          _csum.y *= s;
+          _csum.z *= s;
+          _lmax = logit;
+        }
+
+        float w = D * expf(logit - _lmax);
+        _wsum += w;
+
+        _csum.x += w * color.x;
+        _csum.y += w * color.y;
+        _csum.z += w * color.z;
       }
     }
     start += LOAD_PHASE;
   }
 
   if (!only_loads_shared) {
-    *render_ptr = make_float4(1.0f, 1.0f, 1.0f, 1.0f - accum);
+
+    float wbg = expf(BG_LOGIT - _lmax);
+    float inv = 1.0f / (_wsum + wbg);
+
+    lmax[global_pix] = _lmax;
+    wsum[global_pix] = _wsum;
+    accums[global_pix] = accum;
+
+    *render_ptr =
+        make_float4((_csum.x + wbg * params.bg_color) * inv,
+                    (_csum.y + wbg * params.bg_color) * inv,
+                    (_csum.z + wbg * params.bg_color) * inv, 1.0f - accum);
   }
 }
 
