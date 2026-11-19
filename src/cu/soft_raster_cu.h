@@ -32,7 +32,8 @@ public:
     m_params.num_views = batch;
   };
 
-  void init_allocate(int total_views, int num_faces);
+  void init_allocate(int total_views, int num_faces,
+                     std::vector<Image> &gt_images);
   void add_cameras(const std::vector<CameraCUDA> &cams);
   void cuda_free(); // free all that data... wont be necessary with device
                     // bufefr implementation

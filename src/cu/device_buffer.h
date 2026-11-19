@@ -32,6 +32,10 @@ template <typename T> struct DeviceBuffer {
     cudaMemcpy(ptr, host, n * sizeof(T), cudaMemcpyHostToDevice);
   }
 
+  void upload_to_device_offset(const T *host, size_t count, size_t offset) {
+    cudaMemcpy(ptr + offset, host, count * sizeof(T), cudaMemcpyHostToDevice);
+  }
+
   void get_from_device(T *host) {
     cudaMemcpy(host, ptr, n * sizeof(T), cudaMemcpyDeviceToHost);
   }

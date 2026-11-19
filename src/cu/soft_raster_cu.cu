@@ -10,10 +10,18 @@ void SoftRasterizerCUDA::add_cameras(const std::vector<CameraCUDA> &cams) {
                      cams.size() * sizeof(CameraCUDA));
 }
 
-void SoftRasterizerCUDA::init_allocate(int total_views, int num_faces) {
+void SoftRasterizerCUDA::init_allocate(int total_views, int num_faces,
+                                       std::vector<Image> &gt_images) {
 
   m_render_targets.resize(m_w * m_h * 4 * m_batch);
+
   m_gt_images.resize(m_w * m_h * 4 * total_views);
+  for (int i = 0; i < total_views; i++) {
+    Image &im = gt_images[i];
+    size_t im_size = m_w * m_h * 4;
+    size_t offset = im_size * i;
+    m_gt_images.upload_to_device_offset(im.data(), im_size, offset);
+  }
 
   m_accums.resize(m_w * m_h * m_batch);
   m_lmax.resize(m_w * m_h * m_batch);

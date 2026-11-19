@@ -127,7 +127,7 @@ int main(int argc, char **argv) {
     cuda_raster.add_cameras(device_cams);
     opt_tex_device.upload_to_device(opt_tex);
     opt_mesh_device.upload_to_device(opt_mesh);
-    cuda_raster.init_allocate(n_views, (int)opt_mesh.faces().size());
+    cuda_raster.init_allocate(n_views, (int)opt_mesh.faces().size(), gt_views);
   }
 
   for (int iter = 0; iter < n_iters; iter++) {
