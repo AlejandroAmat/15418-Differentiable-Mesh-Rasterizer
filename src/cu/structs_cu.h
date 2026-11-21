@@ -3,6 +3,7 @@
 #include "mesh.h"
 #include "persp_camera.h"
 #include "texture.h"
+
 #include "utils.h"
 
 struct MeshCUDA {

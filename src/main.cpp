@@ -4,6 +4,7 @@
 #include "loss.h"
 #include "mesh.h"
 #include "optimizer.h"
+#include "optimizer_cu.h"
 #include "persp_camera.h"
 #include "soft_raster.h"
 #include "soft_raster_cu.h"
@@ -82,6 +83,9 @@ int main(int argc, char **argv) {
   float lr = 0.0060f;
   Adam optim(lr);
 
+  AdamCUDA tex_optim_cu(lr_tex);
+  AdamCUDA mesh_optim_cu(lr);
+
   int tex_start = 50;
   LossData loss;
 
@@ -154,6 +158,7 @@ int main(int argc, char **argv) {
     int since = iter - last_subdiv;
     float warm = std::min(1.0f, 0.1f + since / 10.0f);
     optim.set_lr(lr * warm);
+    // mesh_optim_cu.set_lr(lr * warm);
     //------------------------------------------------
 
     std::shuffle(order.begin(), order.end(), rng);
@@ -167,6 +172,10 @@ int main(int argc, char **argv) {
     //---------------------------------------------------
 
     int rounds = BATCH_SIZE / CUDA_BATCH_SIZE;
+
+    opt_mesh_device.grads.set_zero();
+    opt_tex_device.grads.set_zero();
+
     auto start_gpu = std::chrono::high_resolution_clock::now();
     for (int b = 0; b < rounds; ++b) {
 
@@ -193,12 +202,6 @@ int main(int argc, char **argv) {
       }
     }
 
-    cudaDeviceSynchronize();
-    auto end_gpu_fwd = std::chrono::high_resolution_clock::now();
-    auto duration_gpu = std::chrono::duration_cast<std::chrono::milliseconds>(
-        end_gpu_fwd - start_gpu);
-
-    std::cout << "\n GPU: " << duration_gpu.count() << std::endl;
     // float lapl_loss = laplacian_smoothing(adjacency, opt_mesh, grad,
     // lambda);
 
@@ -207,17 +210,38 @@ int main(int argc, char **argv) {
     //   tex_optim.step(&opt_tex.image().at(0, 0), &tex_grad.at(0, 0),
     //                  (size_t)opt_tex.get_w() * opt_tex.get_h() * 3);
 
-    // if (iter % 5 == 0) {
-    //   printf("iter %d  loss %.6f\n", iter, batch_loss);
-    //   printf("iter %d  loss_lapl %.6f\n", iter, lapl_loss);
-    //   printf("iter %d  loss_tex %.6f\n", iter, batch_rgb);
-    //   for (int idx : {0, 7, 14, 26}) {
+    mesh_optim_cu.step(opt_mesh_device.verts.ptr, opt_mesh_device.grads.ptr,
+                       opt_mesh_device.n_verts * 3);
+    if (iter >= tex_start)
+      tex_optim_cu.step(opt_tex_device.data.ptr, opt_tex_device.grads.ptr,
+                        (size_t)opt_tex_device.w * opt_tex_device.h * 3);
 
-    //     Image shaded(WIDTH, HEIGHT, 4);
-    //     raster.render_shaded(opt_mesh, opt_tex, idx, shaded);
-    //     shaded.write_png(out_dir + "shaded_" + std::to_string(idx) + "_f" +
-    //                      std::to_string(iter / 5) + ".png");
-    //   }
-    // }
+    cudaDeviceSynchronize();
+    auto end_gpu_fwd = std::chrono::high_resolution_clock::now();
+    auto duration_gpu = std::chrono::duration_cast<std::chrono::milliseconds>(
+        end_gpu_fwd - start_gpu);
+
+    std::cout << "\n GPU: " << duration_gpu.count() << std::endl;
+
+    if (iter % 5 == 0) {
+      // printf("iter %d  loss %.6f\n", iter, batch_loss);
+      // printf("iter %d  loss_lapl %.6f\n", iter, lapl_loss);
+      // printf("iter %d  loss_tex %.6f\n", iter, batch_rgb);
+      // for (int idx : {0¿, 7, 14, 26}) {
+      for (int idx : {0}) {
+
+        Image shaded(WIDTH, HEIGHT, 4);
+
+        opt_mesh_device.verts.get_from_device(
+            (float *)opt_mesh.vertices().data());
+        opt_tex_device.data.get_from_device(&opt_tex.image().at(0, 0));
+
+        raster.render_shaded(opt_mesh, opt_tex, idx, shaded);
+        // shaded.write_png(out_dir + "shaded_" + std::to_string(idx) + "_f" +
+        //                  std::to_string(iter / 5) + ".png");
+        shaded.write_png(out_dir + "shaded_" + std::to_string(idx) + "_f" +
+                         std::to_string('final') + ".png");
+      }
+    }
   }
 }

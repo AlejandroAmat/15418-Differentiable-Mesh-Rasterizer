@@ -623,6 +623,42 @@ __global__ void bwd_render(int *ranges, int *faces_sorted, FaceData *face_data,
   }
 }
 
+__global__ void bwd_uv_to_vert(const float *verts, int num_verts,
+                               float *uv_grads, RasterParamsDevice params,
+                               int batch, float *grads) {
+
+  int v = blockIdx.x * blockDim.x + threadIdx.x;
+  if (v >= num_verts)
+    return;
+
+  float3 p = *(const float3 *)(&verts[v * 3]);
+  float3 acc = make_float3(0.f, 0.f, 0.f);
+
+  for (int b = 0; b < batch; b++) {
+    float2 uv_grad =
+        *(const float2 *)(&uv_grads[((size_t)b * num_verts + v) * 2]);
+    if (uv_grad.x == 0.f && uv_grad.y == 0.f)
+      continue;
+
+    const CameraCUDA &cam = device_cams[params.views[b]];
+    float3 proj = to_pixel(cam, p);
+
+    float gX = uv_grad.x * cam.fx * proj.z;
+    float gY = uv_grad.y * cam.fy * proj.z;
+    float gZ =
+        -(uv_grad.x * (proj.x - cam.cx) + uv_grad.y * (proj.y - cam.cy)) *
+        proj.z;
+
+    acc.x += cam.R[0] * gX + cam.R[3] * gY + cam.R[6] * gZ;
+    acc.y += cam.R[1] * gX + cam.R[4] * gY + cam.R[7] * gZ;
+    acc.z += cam.R[2] * gX + cam.R[5] * gY + cam.R[8] * gZ;
+  }
+
+  grads[v * 3] += acc.x;
+  grads[v * 3 + 1] += acc.y;
+  grads[v * 3 + 2] += acc.z;
+}
+
 void SoftRasterizerCUDA::forward(MeshCUDA &mesh, TextureCUDA &tex,
                                  std::vector<int> &index, int start) {
 
@@ -704,8 +740,6 @@ void SoftRasterizerCUDA::backward(MeshCUDA &mesh, TextureCUDA &tex,
     m_params.views[i] = index[start + i];
   }
 
-  mesh.grads.set_zero();
-  tex.grads.set_zero();
   m_uv_grads.set_zero();
 
   int tiles_x = (m_w + BLOCK_X - 1) / BLOCK_X;
@@ -721,4 +755,8 @@ void SoftRasterizerCUDA::backward(MeshCUDA &mesh, TextureCUDA &tex,
       mesh.faces.ptr);
 
   // bwd : uv_to_vertex
+  dim3 block_v(BLOCK_SIZE);
+  dim3 grid_v((verts + BLOCK_SIZE - 1) / BLOCK_SIZE);
+  bwd_uv_to_vert<<<grid_v, block_v>>>(mesh.verts.ptr, verts, m_uv_grads.ptr,
+                                      m_params, m_batch, mesh.grads.ptr);
 }

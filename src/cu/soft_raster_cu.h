@@ -8,9 +8,6 @@
 #include "utils.h"
 
 #include <vector>
-#define BLOCK_SIZE 256
-#define BLOCK_X 16
-#define BLOCK_Y 16
 
 struct RasterParamsDevice {
   float sigma;
@@ -31,7 +28,7 @@ public:
     m_params.w = w;
     m_params.h = h;
     m_params.num_views = batch;
-    m_params.inv_n = 1.0f / (m_w * m_h * m_batch);
+    m_params.inv_n = 1.0f / (m_w * m_h * BATCH_SIZE);
   };
 
   void init_allocate(int total_views, int num_faces,

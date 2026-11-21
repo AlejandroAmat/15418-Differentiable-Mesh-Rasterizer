@@ -26,6 +26,7 @@ add_executable(diff_rast_418
   src/optim/optimizer.cpp
   src/core/texture.cpp
   src/cu/soft_raster_cu.cu
+  src/cu/optimizer_cu.cu
 )
 find_package(CUDAToolkit REQUIRED)
 target_link_libraries(diff_rast_418 PRIVATE CUDA::cudart)

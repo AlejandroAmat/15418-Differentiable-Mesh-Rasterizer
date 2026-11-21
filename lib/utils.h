@@ -5,9 +5,12 @@
 
 #define WIDTH 400
 #define HEIGHT 400
-#define NUM_FACES_START 3000
+#define NUM_FACES_START 12000
 #define BATCH_SIZE 20
 #define MAX_CAMS 60
+#define BLOCK_SIZE 256
+#define BLOCK_X 16
+#define BLOCK_Y 16
 
 struct Mat3 {
   float m[9];
