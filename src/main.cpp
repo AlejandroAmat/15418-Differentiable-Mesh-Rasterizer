@@ -60,14 +60,14 @@ int main(int argc, char **argv) {
 
   //------- Optim ----------
   // :::::Mesh:::
+  // device
+  MeshCUDA opt_mesh_device;
   // host
   Mesh opt_mesh;
   create_sphere(opt_mesh, center, 0.8 * scale, NUM_FACES_START);
   compute_sphere_uvs(opt_mesh, center);
   std::vector<std::vector<int>> adjacency = build_adjacency(opt_mesh);
   std::vector<Vec3F> grad(opt_mesh.vertices().size());
-  // device
-  MeshCUDA opt_mesh_device;
 
   //:::::::::::::::
   //::::Text::::::
@@ -210,6 +210,7 @@ int main(int argc, char **argv) {
     //   tex_optim.step(&opt_tex.image().at(0, 0), &tex_grad.at(0, 0),
     //                  (size_t)opt_tex.get_w() * opt_tex.get_h() * 3);
 
+    cuda_raster.laplacian_reg(opt_mesh_device, lambda);
     mesh_optim_cu.step(opt_mesh_device.verts.ptr, opt_mesh_device.grads.ptr,
                        opt_mesh_device.n_verts * 3);
     if (iter >= tex_start)

@@ -1,5 +1,6 @@
 #pragma once
 #include "device_buffer.h"
+#include "geometry.h"
 #include "mesh.h"
 #include "persp_camera.h"
 #include "texture.h"
@@ -13,6 +14,10 @@ struct MeshCUDA {
   DeviceBuffer<int> faces;
   DeviceBuffer<int> faces_uvs;
   DeviceBuffer<float> uvs;
+  DeviceBuffer<int> adj_offsets;
+  DeviceBuffer<int> adj_idx;
+  DeviceBuffer<float> lapl_delta;
+
   int n_verts = 0;
   int n_faces = 0;
 
@@ -33,6 +38,20 @@ struct MeshCUDA {
 
     faces_uvs.upload_to_device(
         reinterpret_cast<const int *>(m.faces_uvs().data()), 3 * n_faces);
+
+    std::vector<std::vector<int>> adj = build_adjacency(m);
+    std::vector<int> offsets(n_verts + 1);
+    std::vector<int> idx;
+    offsets[0] = 0;
+
+    for (int v = 0; v < n_verts; v++) {
+      idx.insert(idx.end(), adj[v].begin(), adj[v].end());
+      offsets[v + 1] = offsets[v] + adj[v].size();
+    }
+
+    adj_offsets.upload_to_device(offsets.data(), n_verts + 1);
+    adj_idx.upload_to_device(idx.data(), idx.size());
+    lapl_delta.resize(n_verts * 3);
   }
 };
 

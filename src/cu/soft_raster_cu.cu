@@ -659,6 +659,62 @@ __global__ void bwd_uv_to_vert(const float *verts, int num_verts,
   grads[v * 3 + 2] += acc.z;
 }
 
+__global__ void laplacian_fwd(const float *verts, int num_verts,
+                              int *adjacency_ids, int *adjacency_offsets,
+                              float *delta_lapl) {
+
+  int v = blockIdx.x * blockDim.x + threadIdx.x;
+  if (v >= num_verts)
+    return;
+
+  int start = adjacency_offsets[v];
+  int end = adjacency_offsets[v + 1];
+
+  float3 avg = make_float3(0.f, 0.f, 0.f);
+  for (int i = start; i < end; i++) {
+    int j = adjacency_ids[i];
+    float3 p = *(float3 *)(&verts[j * 3]);
+    avg.x += p.x;
+    avg.y += p.y;
+    avg.z += p.z;
+  }
+
+  float inv_deg = 1.0f / (end - start);
+  float3 p = *(float3 *)(&verts[v * 3]);
+
+  delta_lapl[v * 3] = p.x - avg.x * inv_deg;
+  delta_lapl[v * 3 + 1] = p.y - avg.y * inv_deg;
+  delta_lapl[v * 3 + 2] = p.z - avg.z * inv_deg;
+}
+
+__global__ void laplacian_bwd(int num_verts, int *adjacency_ids,
+                              int *adjacency_offsets, float *delta_lapl,
+                              float *grads, float lambda) {
+
+  int v = blockIdx.x * blockDim.x + threadIdx.x;
+  if (v >= num_verts)
+    return;
+
+  int start = adjacency_offsets[v];
+  int end = adjacency_offsets[v + 1];
+  float scale = lambda * 2.0f / num_verts;
+
+  float3 g = *(float3 *)(&delta_lapl[v * 3]);
+
+  for (int i = start; i < end; i++) {
+    int j = adjacency_ids[i];
+    float3 p = *(float3 *)(&delta_lapl[j * 3]);
+    float inv_deg = 1.0f / (adjacency_offsets[j + 1] - adjacency_offsets[j]);
+    g.x -= p.x * inv_deg;
+    g.y -= p.y * inv_deg;
+    g.z -= p.z * inv_deg;
+  }
+
+  grads[v * 3] += g.x * scale;
+  grads[v * 3 + 1] += g.y * scale;
+  grads[v * 3 + 2] += g.z * scale;
+}
+
 void SoftRasterizerCUDA::forward(MeshCUDA &mesh, TextureCUDA &tex,
                                  std::vector<int> &index, int start) {
 
@@ -759,4 +815,18 @@ void SoftRasterizerCUDA::backward(MeshCUDA &mesh, TextureCUDA &tex,
   dim3 grid_v((verts + BLOCK_SIZE - 1) / BLOCK_SIZE);
   bwd_uv_to_vert<<<grid_v, block_v>>>(mesh.verts.ptr, verts, m_uv_grads.ptr,
                                       m_params, m_batch, mesh.grads.ptr);
+}
+
+void SoftRasterizerCUDA::laplacian_reg(MeshCUDA &mesh, float lambda) {
+
+  int verts = mesh.n_verts;
+  dim3 block_v(BLOCK_SIZE);
+  dim3 grid_v((verts + BLOCK_SIZE - 1) / BLOCK_SIZE);
+
+  laplacian_fwd<<<grid_v, block_v>>>(mesh.verts.ptr, verts, mesh.adj_idx.ptr,
+                                     mesh.adj_offsets.ptr, mesh.lapl_delta.ptr);
+
+  laplacian_bwd<<<grid_v, block_v>>>(verts, mesh.adj_idx.ptr,
+                                     mesh.adj_offsets.ptr, mesh.lapl_delta.ptr,
+                                     mesh.grads.ptr, lambda);
 }

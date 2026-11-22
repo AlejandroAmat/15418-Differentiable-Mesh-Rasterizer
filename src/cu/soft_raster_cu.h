@@ -43,6 +43,8 @@ public:
   void backward(MeshCUDA &mesh, TextureCUDA &tex, std::vector<int> &index,
                 int start, float w_rgb);
 
+  void laplacian_reg(MeshCUDA &mesh, float lambda);
+
   void set_sigma(float sigma) {
     m_params.sigma = sigma;
     m_params.inv_sigma = 1.0f / sigma;
