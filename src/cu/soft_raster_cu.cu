@@ -830,3 +830,132 @@ void SoftRasterizerCUDA::laplacian_reg(MeshCUDA &mesh, float lambda) {
                                      mesh.adj_offsets.ptr, mesh.lapl_delta.ptr,
                                      mesh.grads.ptr, lambda);
 }
+
+__global__ void emit_edge(int *faces, unsigned long long *edges, int *vals,
+                          int bits, int num_faces) {
+
+  int idx = threadIdx.x + blockDim.x * blockIdx.x;
+  if (idx >= num_faces)
+    return;
+
+  int3 vert_ids = *(int3 *)(&faces[idx * 3]);
+
+  edges[3 * idx] = ((unsigned long long)min(vert_ids.x, vert_ids.y) << bits) |
+                   (unsigned)max(vert_ids.x, vert_ids.y);
+  vals[3 * idx] = 3 * idx;
+
+  edges[3 * idx + 1] =
+      ((unsigned long long)min(vert_ids.y, vert_ids.z) << bits) |
+      (unsigned)max(vert_ids.y, vert_ids.z);
+  vals[3 * idx + 1] = 3 * idx + 1;
+
+  edges[3 * idx + 2] =
+      ((unsigned long long)min(vert_ids.x, vert_ids.z) << bits) |
+      (unsigned)max(vert_ids.x, vert_ids.z);
+  vals[3 * idx + 2] = 3 * idx + 2;
+}
+
+__global__ void flag(unsigned long long *keys, int *flag, int num_edges) {
+
+  int idx = threadIdx.x + blockDim.x * blockIdx.x;
+  if (idx >= num_edges)
+    return;
+  if (idx == 0 || keys[idx] != keys[idx - 1])
+    flag[idx] = 1;
+}
+
+__global__ void set_midpoints(int *offsets, unsigned long long *edges_sorted,
+                              int *vals_sorted, float *verts, int num_edges,
+                              float *new_verts, int *face_edges, int num_verts,
+                              int bits) {
+  int idx = threadIdx.x + blockDim.x * blockIdx.x;
+  if (idx >= num_edges)
+    return;
+
+  int edge_id = offsets[idx] - 1;
+  face_edges[vals_sorted[idx]] = edge_id;
+  if (idx != 0 && offsets[idx] == offsets[idx - 1])
+    return;
+
+  unsigned long long edge_key = edges_sorted[idx];
+  int vert_a = (int)(edge_key >> bits);
+  int vert_b = (int)(edge_key & ((1ull << bits) - 1));
+
+  float *v_a = &verts[3 * vert_a];
+  float *v_b = &verts[3 * vert_b];
+  int output_id = 3 * (num_verts + edge_id);
+
+  new_verts[output_id] = 0.5f * (v_a[0] + v_b[0]);
+  new_verts[output_id + 1] = 0.5f * (v_a[1] + v_b[1]);
+  new_verts[output_id + 2] = 0.5f * (v_a[2] + v_b[2]);
+}
+
+void SoftRasterizerCUDA::subdivide_midpoint(MeshCUDA &mesh) {
+  int faces = mesh.n_faces;
+  int verts = mesh.n_verts;
+  // we need unique edge ids
+  DeviceBuffer<unsigned long long> edges, edges_sorted;
+  DeviceBuffer<int> vals, vals_sorted, flags, new_faces, face_edges;
+  DeviceBuffer<float> new_verts;
+
+  size_t edges_num = faces * 3;
+
+  edges.resize(edges_num);
+  edges_sorted.resize(edges_num);
+  vals.resize(edges_num);
+  vals_sorted.resize(edges_num);
+  flags.resize(edges_num);
+  new_faces.resize(4 * faces * 3);
+  face_edges.resize(faces * 3);
+
+  int bits = 32 - __builtin_clz((unsigned)(verts - 1));
+
+  dim3 block(BLOCK_SIZE);
+  dim3 grid_face((faces + BLOCK_SIZE - 1) / BLOCK_SIZE);
+
+  emit_edge<<<grid_face, block>>>(mesh.faces.ptr, edges.ptr, vals.ptr, bits,
+                                  faces);
+
+  size_t sort_bytes = 0;
+  size_t scan_bytes = 0;
+  cub::DeviceRadixSort::SortPairs(nullptr, sort_bytes, edges.ptr,
+                                  edges_sorted.ptr, vals.ptr, vals_sorted.ptr,
+                                  edges_num, 0, bits * 2);
+
+  DeviceBuffer<char> temp_cub;
+  temp_cub.resize(sort_bytes);
+
+  cub::DeviceRadixSort::SortPairs(temp_cub.ptr, sort_bytes, edges.ptr,
+                                  edges_sorted.ptr, vals.ptr, vals_sorted.ptr,
+                                  edges_num, 0, bits * 2);
+  // all edges grouped if repeated
+
+  dim3 grid_edge((edges_num + BLOCK_SIZE - 1) / BLOCK_SIZE);
+  flag<<<grid_edge, block>>>(edges_sorted.ptr, flags.ptr, edges_num);
+
+  // similar to the find peaks, now we have 1 for the unique edges
+
+  cub::DeviceScan::InclusiveSum(nullptr, scan_bytes, flags.ptr, flags.ptr,
+                                edges_num);
+
+  temp_cub.resize(scan_bytes);
+
+  cub::DeviceScan::InclusiveSum(temp_cub.ptr, scan_bytes, flags.ptr, flags.ptr,
+                                edges_num);
+
+  // now we know index of unique edges
+  int unique_edges;
+  flags.copy_from_device(&unique_edges, edges_num - 1, 1);
+
+  assert(unique_edges == 3 * faces / 2);
+
+  new_verts.resize((verts + unique_edges) * 3);
+  cudaMemcpy(new_verts.ptr, mesh.verts.ptr, verts * 3 * sizeof(float),
+             cudaMemcpyDeviceToDevice);
+
+  set_midpoints<<<grid_edge, block>>>(
+      flags.ptr, edges_sorted.ptr, vals_sorted.ptr, mesh.verts.ptr, edges_num,
+      new_verts.ptr, face_edges.ptr, verts, bits);
+
+  // perform now subdivision and new vertex gen + uv etc
+}

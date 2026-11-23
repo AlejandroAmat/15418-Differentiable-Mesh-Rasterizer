@@ -45,6 +45,8 @@ public:
 
   void laplacian_reg(MeshCUDA &mesh, float lambda);
 
+  void subdivide_midpoint(MeshCUDA &mesh);
+
   void set_sigma(float sigma) {
     m_params.sigma = sigma;
     m_params.inv_sigma = 1.0f / sigma;
