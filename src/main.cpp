@@ -18,7 +18,7 @@
 #include <random>
 
 int main(int argc, char **argv) {
-  float lambda = (argc > 1) ? std::stof(argv[1]) : 420.0f;
+  float lambda = (argc > 1) ? std::stof(argv[1]) : 4 * 420.0f;
   std::string run = (argc > 1) ? argv[1] : "420";
 
   int CUDA_BATCH_SIZE = 20;
@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
   bool USE_CUDA = true;
   bool USE_CPP = false;
 
-  std::string dataset = "colossal_titan";
+  std::string dataset = "demon";
   std::string path = "../data/" + dataset + "/";
 
   std::filesystem::create_directories(path + "train_views");
