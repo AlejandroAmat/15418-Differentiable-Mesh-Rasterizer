@@ -3,9 +3,9 @@
 #include <cmath>
 #include <iostream>
 
-#define WIDTH 400
-#define HEIGHT 400
-#define NUM_FACES_START 15000
+#define WIDTH 600
+#define HEIGHT 600
+#define NUM_FACES_START 49000
 #define BATCH_SIZE 20
 #define MAX_CAMS 60
 #define BLOCK_SIZE 256

@@ -3,18 +3,9 @@
 #include <cmath>
 #include <stdexcept>
 
-static float srgb_to_linear(float c) {
-  return c <= 0.04045f ? c / 12.92f : std::pow((c + 0.055f) / 1.055f, 2.4f);
-}
-
 void Texture::load(const std::string &path) {
   m_img = Image(1, 1, 3);
   m_img.read_png(path);
-
-  for (int y = 0; y < m_img.get_h(); ++y)
-    for (int x = 0; x < m_img.get_w(); ++x)
-      for (int c = 0; c < 3; ++c)
-        m_img.at(x, y, c) = srgb_to_linear(m_img.at(x, y, c));
 }
 
 BilinearSample Texture::bilinear(float u, float v) const {

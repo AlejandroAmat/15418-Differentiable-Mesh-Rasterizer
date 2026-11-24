@@ -35,7 +35,7 @@ int main(int argc, char **argv) {
   bool USE_CUDA = true;
   bool USE_CPP = false;
 
-  std::string dataset = "demon";
+  std::string dataset = "colossal_titan";
   std::string path = "../data/" + dataset + "/";
 
   std::filesystem::create_directories(path + "train_views");
@@ -44,7 +44,7 @@ int main(int argc, char **argv) {
   std::string out_dir = path + "opt_views/lambda_" + run + "/";
   std::filesystem::create_directories(out_dir);
 
-  bool generate = false;
+  bool generate = true;
 
   // GT
   Mesh gt_mesh;
@@ -228,8 +228,8 @@ int main(int argc, char **argv) {
       // printf("iter %d  loss %.6f\n", iter, batch_loss);
       // printf("iter %d  loss_lapl %.6f\n", iter, lapl_loss);
       // printf("iter %d  loss_tex %.6f\n", iter, batch_rgb);
-      // for (int idx : {0¿, 7, 14, 26}) {
-      for (int idx : {0}) {
+      for (int idx : {0, 7, 14, 26}) {
+        // for (int idx : {0}) {
 
         Image shaded(WIDTH, HEIGHT, 4);
 
